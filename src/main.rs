@@ -1,16 +1,30 @@
 use std::env;
 use std::fs;
-fn print_file() {
+use syn::Result;
+
+
+fn print_ast_from_file() -> Result<()>{
     let args: Vec<String> = env::args().collect();
     
     let filename = &args[1];
-    let contents = fs::read_to_string(filename)
+    let content = fs::read_to_string(filename)
         .expect("Something went wrong reading the file");
-
-    println!("With text:\n{}", contents);
+    let ast = syn::parse_file(&content)?;
+    for x in ast.items.iter() {
+        println!(" > {:#?}",x)
+    }
+    println!("{} items", ast.items.len());
+    
+    Ok(())
 }
 
 fn main() {
     println!("Hello, world!");
-    print_file(); // cargo run ./src/guessing_game.rs
+    
+    // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
 }
+
+
+
+
+
