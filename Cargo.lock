@@ -4,6 +4,7 @@
 name = "cs453-project"
 version = "0.1.0"
 dependencies = [
+ "quote",
  "syn",
 ]
 
