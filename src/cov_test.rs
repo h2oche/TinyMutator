@@ -11,16 +11,19 @@ use std::path::MAIN_SEPARATOR;
 use std::process::Command;
 use std::str;
 
-pub fn run_test(path: String) {
+/**
+ * Run cargo tarpaulin & Return the path of report
+ */
+pub fn run_test(path: String) -> Option<String> {
     // Get Absolute path
     let absolute_path = utils::get_abs_path(&path);
     // Get current working directory
     let current_working_dir = utils::get_cwd();
 
-    // Make a subprocess & Run 'cargo test'
+    // Make a subprocess & Run 'cargo tarpaulin'
     let _ = Command::new("cargo")
         .args(&["install", "cargo-tarpaulin"])
-        .status(); // Install tarpaulin
+        .status();                          // Install tarpaulin
     let mut shell = Command::new("cargo");
     shell.args(&[
         "tarpaulin",
@@ -30,16 +33,11 @@ pub fn run_test(path: String) {
         &current_working_dir,
     ]);
     shell.current_dir(absolute_path);
-    let output = shell.output().expect("failed to execute process"); // stdout
+    let output = shell.output().status();   // run cargo tarpaulin
 
-    // These are debug functions
-    println!("=====");
-    let s: &str = match str::from_utf8(output.stdout.as_slice()) {
-        Ok(v) => v,
-        Err(_e) => panic!("Not"),
-    };
-    println!("{}", s);
-    println!("=====");
+    let report_path = current_working_dir + "/tarpaulin-report.json";
+
+    return Some(report_path);
 }
 
 #[derive(Debug)]

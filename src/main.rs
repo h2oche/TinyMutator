@@ -17,8 +17,14 @@ fn print_ast_from_file() -> Result<()> {
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        panic!("No Specified Project Directory");
+    }
+    let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap().as_str();
+
     let trace_info =
-        cov_test::parse("tarpaulin-report.json").expect("tarpaulin report parsing error");
+        cov_test::parse(tarpaulin_report).expect("tarpaulin report parsing error");
     println!("{:?}", trace_info);
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
 }
