@@ -1,0 +1,9 @@
+[submodule "fd"]
+	path = fd
+	url = https://github.com/h2oche/fd.git
+[submodule "tarpaulin"]
+	path = tarpaulin
+	url = https://github.com/xd009642/tarpaulin.git
+[submodule "itertools"]
+	path = itertools
+	url = https://github.com/rust-itertools/itertools.git
