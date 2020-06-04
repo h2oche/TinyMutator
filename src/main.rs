@@ -1,4 +1,5 @@
 mod cov_test;
+mod mut_gen;
 mod utils;
 use std::env;
 use std::fs;
@@ -23,8 +24,7 @@ fn main() {
     }
     let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap().as_str();
 
-    let trace_info =
-        cov_test::parse(tarpaulin_report).expect("tarpaulin report parsing error");
+    let trace_info = cov_test::parse(tarpaulin_report_path).expect("tarpaulin report parsing error");
     println!("{:?}", trace_info);
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
 }
