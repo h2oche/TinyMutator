@@ -2,7 +2,7 @@ const THRESTHOLD: i32 = 1;
 const LIFE: i32 = 3;
 
 fn main() {
-    const Time: i32 = 1000;
+    const Time: f32 = 3.0;
     let a = 1;
     let b = 2;
     let c = 2 * a - b + 1;
