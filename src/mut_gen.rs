@@ -1,12 +1,19 @@
 extern crate proc_macro;
 extern crate syn;
 
-use std::{fs, env, io::prelude::*, str::FromStr};
+use syn::Item;
+use std::{fs, env, io::prelude::*, str::FromStr, vec};
 use syn::{parse_macro_input, DeriveInput, Type, Expr, Result, Stmt, spanned::Spanned};
 use proc_macro::{TokenStream, TokenTree};
 use quote::quote_spanned;
 use rand::seq::SliceRandom;
 
+use quote::quote;
+use syn::visit::{self, Visit};
+use syn::{File, ItemFn};
+
+use std::io::{self, BufRead};
+use std::path::Path;
 /**
  * Print type of an object
  */
@@ -127,4 +134,59 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     }
 
     return "hello".to_string(); // temporary return value
+}
+
+
+extern crate proc_macro2;
+use proc_macro2::Span;
+
+struct StmtVisitor<'ast> {
+    statements: Vec<&'ast Stmt>,
+}
+
+impl<'ast> Visit<'ast> for StmtVisitor<'ast> {
+    fn visit_stmt(&mut self, node: &'ast Stmt) {
+        self.statements.push(node);
+        visit::visit_stmt(self, node);
+    }
+}
+
+struct ItemVisitor<'ast> {
+    items: Vec<&'ast Item>,
+}
+
+impl<'ast> Visit<'ast> for ItemVisitor<'ast> {
+    fn visit_item(&mut self, node: &'ast Item) {
+        self.items.push(node);
+        visit::visit_item(self, node);
+    }
+}
+pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
+    let args: Vec<String> = env::args().collect();
+    let file2 = &args[1];
+    let example_source = fs::read_to_string(file2).expect("Something went wrong reading the file");
+
+    let file = syn::parse_file(&example_source).unwrap();
+    println!("{:#?}", file);
+    let mut _Stmtvisitor = StmtVisitor { statements: Vec::new() };
+    _Stmtvisitor.visit_file(&file);
+    for stmt in _Stmtvisitor.statements {
+        let span = stmt.span();
+        let start = span.start();
+        let end = span.end();
+        if start.line <= num_line && num_line <= end.line {
+            println!("Find statement in line {} \n {:#?}", num_line, stmt);
+        }
+    }
+    let mut _Itemvisitor = ItemVisitor { items: Vec::new() };
+    _Itemvisitor.visit_file(&file);
+    for item in _Itemvisitor.items {
+        let span = item.span();
+        let start = span.start();
+        let end = span.end();
+        if start.line <= num_line && num_line <= end.line {
+            println!("Find item in line {} \n {:#?}", num_line, item);
+        }
+    }
+    return "hello".to_string(); // temporary return value   
 }
