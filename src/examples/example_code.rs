@@ -42,6 +42,13 @@ fn get_balance(x: Option<i32>) -> i32 {
     }
 }
 
+fn match_example(x: i32) -> i32 {
+    match x {
+        0 => { 0 },
+        _ => { 1 },
+    }
+}
+
 fn is_zero(x : i32) -> bool { x == 0 }
 
 fn x_and_y(x: i32, y: i32) -> i32 { x&y }
