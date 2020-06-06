@@ -25,7 +25,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let args: Vec<String> = env::args().collect();
     let file = &args[1];
     let content = fs::read_to_string(file).expect("Something went wrong reading the file");
-    let ast = syn::parse_file(&content);
+    let ast = syn::parse_file(&content);    
     // for item in ast.items.iter() {
     //     match item {
     //         _ => { 
@@ -37,7 +37,6 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
 
     let lines = content.split("\r\n");
     for line in lines {
-        // println!("{:#?}", line);
         let expr = syn::parse_str::<Stmt>(line);
         match expr {
             Ok(stmt) => {
@@ -49,10 +48,16 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                         // print_type_of(&local.init);
                     }
                     syn::Stmt::Item(item) => { // constant and something                        
+                        match item {
+                            syn::Item::Use(_itemuse) => {},
+                            _ => {}
+
+                        }
                         // println!("{:#?}", item);
                         // println!("{}", line);
                         let mut constexpr: Vec<_> = line.split("=").collect();
-                        println!("{}", &constexpr[1])
+                        println!("{:#?}", constexpr);
+                        // println!("{}", &constexpr[1])
                     }
                     syn::Stmt::Expr(expr) => {
                         // println!("{:#?}", expr);
@@ -70,6 +75,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     }
  
     let mut lines: Vec<_> = content.split("\r\n").collect();
+    
     println!("{}", &lines[num_line - 1]);
 
     return "hello".to_string(); // temporal return value
