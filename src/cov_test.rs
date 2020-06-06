@@ -14,31 +14,31 @@ use std::str;
 /**
  * Run cargo tarpaulin & Return the path of report
  */
-// pub fn run_test(path: String) -> Option<String> {
-//     // Get Absolute path
-//     let absolute_path = utils::get_abs_path(&path);
-//     // Get current working directory
-//     let current_working_dir = utils::get_cwd();
+pub fn run_test(path: String) -> Option<String> {
+    // Get Absolute path
+    let absolute_path = utils::get_abs_path(&path);
+    // Get current working directory
+    let current_working_dir = utils::get_cwd();
 
-//     // Make a subprocess & Run 'cargo tarpaulin'
-//     let _ = Command::new("cargo")
-//         .args(&["install", "cargo-tarpaulin"])
-//         .status();                          // Install tarpaulin
-//     let mut shell = Command::new("cargo");
-//     shell.args(&[
-//         "tarpaulin",
-//         "--out",
-//         "Json",
-//         "--output-dir",
-//         &current_working_dir,
-//     ]);
-//     shell.current_dir(absolute_path);
-//     let output = shell.output().status();   // run cargo tarpaulin
+    // Make a subprocess & Run 'cargo tarpaulin'
+    let _ = Command::new("cargo")
+        .args(&["install", "cargo-tarpaulin"])
+        .status();                          // Install tarpaulin
+    let mut shell = Command::new("cargo");
+    shell.args(&[
+        "tarpaulin",
+        "--out",
+        "Json",
+        "--output-dir",
+        &current_working_dir,
+    ]);
+    shell.current_dir(absolute_path);
+    let output = shell.output(); // run cargo tarpaulin
 
-//     let report_path = current_working_dir + "/tarpaulin-report.json";
+    let report_path = current_working_dir + "/tarpaulin-report.json";
 
-//     return Some(report_path);
-// }
+    return Some(report_path);
+}
 
 #[derive(Debug)]
 pub struct TraceInfo {

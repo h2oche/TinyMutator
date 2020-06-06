@@ -22,9 +22,9 @@ fn main() {
     if args.len() < 2 {
         panic!("No Specified Project Directory");
     }
-    // let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap().as_str();
+    // let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
 
-    // let trace_info = cov_test::parse(tarpaulin_report_path).expect("tarpaulin report parsing error");
+    // let trace_info = cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
     // println!("{:?}", trace_info);
 
     mut_gen::mutate_file_by_line(args[1].clone(), 5);

@@ -1,11 +1,10 @@
 extern crate proc_macro;
 extern crate syn;
-extern crate syntex_syntax as syntax;
 
-use proc_macro::{TokenStream, TokenTree};
 use std::{fs, env, io::prelude::*, str::FromStr};
-use syn::{parse_macro_input, DeriveInput, Type, Expr, Result, Stmt};
-use syntax::{parse};
+use syn::{parse_macro_input, DeriveInput, Type, Expr, Result, Stmt, spanned::Spanned};
+use proc_macro::{TokenStream, TokenTree};
+use quote::quote_spanned;
 
 /**
  * Print type of an object
@@ -21,7 +20,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     println!("filename : {}", file);
     println!("line : {}", num_line);
 
-    let mut vec = vec![0, 1, -1];
+    let mut constants = vec![0, 1, -1];
 
     let args: Vec<String> = env::args().collect();
     let file = &args[1];
@@ -33,28 +32,45 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     //             print_type_of(item)
     //         },
     //     }
-    //     // println!("{:#?}", item);
-    //     println!("\n\n\n\n\n\n\n\n\n\n\n\n");
     // }
     // println!("Hello");
+
     let lines = content.split("\r\n");
-    // let mut lines: Vec<_> = content.split("\r\n").collect();
     for line in lines {
-    //     println!("\n\n\n\n\n");
-        println!(" > {:#?}", line);
-        // print_type_of(&line);
-        // print_type_of(&lines);
+        // println!("{:#?}", line);
         let expr = syn::parse_str::<Stmt>(line);
         match expr {
-            Err(e) => (),
-            _ => {
-                println!("statement found!");
-                println!(" > {:#?}", expr);
-            }
+            Ok(stmt) => {
+                match stmt {
+                    syn::Stmt::Local(local) => { // let binding
+                        // println!(" > {:#?}", &local);
+                        // println!("This is the case:");
+                        // stmt.unwrap();
+                        // print_type_of(&local.init);
+                    }
+                    syn::Stmt::Item(item) => { // constant and something                        
+                        // println!("{:#?}", item);
+                        // println!("{}", line);
+                        let mut constexpr: Vec<_> = line.split("=").collect();
+                        println!("{}", &constexpr[1])
+                    }
+                    syn::Stmt::Expr(expr) => {
+                        // println!("{:#?}", expr);
+                    }
+                    _ => {
+                        println!("not a case");
+                    }
+                }
+            },
+            Err(error) => { // syntax error of target file
+                println!("{}", error);
+            },
         }
-        // println!(" > {:#?}", tmp_content2);
-        println!("\n\n\n\n\n");
+        // println!("\n\n\n\n\n");
     }
-    // temporary
-    return "hello".to_string();
+ 
+    let mut lines: Vec<_> = content.split("\r\n").collect();
+    println!("{}", &lines[num_line - 1]);
+
+    return "hello".to_string(); // temporal return value
 }
