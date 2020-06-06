@@ -6,7 +6,6 @@ fn main() {
     let a = 1;
     let b = 2;
     let c = 2 * a - b + 1;
-    const time: f64 = 1.4;
 
     println!("{} {} {}", a, b, c);
 }

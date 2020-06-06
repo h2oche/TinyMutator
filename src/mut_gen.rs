@@ -10,9 +10,9 @@ use rand::seq::SliceRandom;
 /**
  * Print type of an object
  */
-fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
-}
+// fn print_type_of<T>(_: &T) {
+//     println!("{}", std::any::type_name::<T>())
+// }
 
 /** 
  * Modify specific line of given file
@@ -38,6 +38,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     // }
     // println!("Hello");
 
+
     let lines = content.split("\r\n");
     for line in lines {
         // println!("{:#?}", line);
@@ -52,6 +53,11 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                         // print_type_of(&local.init);
                     }
                     syn::Stmt::Item(item) => { // constant and something
+                        // match item {
+                        //     syn::Item::Use(_itemuse) => {},
+                        //     _ => {}
+
+                        // }
                         println!("{:#?}", item);
                         println!("{}", line);
                         let mut const_expr: Vec<_> = line.split("=").collect();
