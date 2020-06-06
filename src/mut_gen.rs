@@ -54,9 +54,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                     syn::Stmt::Item(item) => { // constant and something
                         println!("{:#?}", item);
                         println!("{}", line);
-                        let mut constExpr: Vec<_> = line.split("=").collect();
-                        println!("{}", &constExpr[1].trim_end_matches(';').trim());
-                        constants.push(constExpr[1].trim_end_matches(";").trim());
+                        let mut const_expr: Vec<_> = line.split("=").collect();
+                        println!("{}", &const_expr[1].trim_end_matches(';').trim());
+                        constants.push(const_expr[1].trim_end_matches(";").trim());
                         println!("hi")
                     }
                     syn::Stmt::Expr(expr) => {
