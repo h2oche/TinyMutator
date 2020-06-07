@@ -14,6 +14,7 @@ use std::{
     str::FromStr,
     vec,
     collections::HashSet,
+    rc::{Rc, Weak},
 };
 use syn::{
     parse_macro_input, parse_quote,
@@ -151,15 +152,34 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     return "hello".to_string(); // temporary return value
 }
 
-
+struct Pos {
+    start_line: usize,
+    start_column: usize,
+    end_line: usize,
+    end_column: usize,
+    start_type: Vec<String>,
+}
 
 struct BinOpVisitor<'ast> {
-    BinOps: Vec<&'ast mut syn::BinOp>,
+    BinOps: Vec<Pos>,
+    // BinOps: Vec<&'ast mut syn::BinOp>,
     Line: usize,
     Column: usize,
     Covered: HashSet<usize>,
     Prevsize: usize,
+    Strong: Rc<File>,
+    Weak: Weak<File>,
+    Ptr: &'ast File,
+    Search: bool,
+    Target: Pos,
+    
 }
+
+// impl<'ast> Young for BinOpVisitor<'ast> {
+//     fn woo(&mut self, node: &mut syn::BinOp, tree: &mut File) {
+//         self.visit_bin_op_mut(node: &mut syn::BinOp);
+//     }
+// }
 
 
 impl<'ast> VisitMut for BinOpVisitor<'ast> {
@@ -167,23 +187,54 @@ impl<'ast> VisitMut for BinOpVisitor<'ast> {
         let start = node.span().start();
         let end = node.span().end();
         let mut isTarget = true;
-        if !(start.line <= self.Line && self.Line <= end.line) {
-            isTarget = false;
-        }
-        if let syn::BinOp::BitOr(or) = &node {
-            if self.Covered.contains(&end.column) || self.Prevsize < self.Covered.len() {
-                isTarget = false;
-            } 
-        } else {
-            isTarget = false;
-        }
-        if isTarget {
-            self.Covered.insert(end.column.clone());
-            self.Column = end.column;
-            *node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));
-        } else {
+        if self.Search {
+            if start.line <= self.Line && self.Line <= end.line {
+                let mut arith = vec![String::from("+"), String::from("-"), String::from("*"), String::from("/"), String::from("%")];
+                let mut bit = vec![String::from("^"), String::from("&"), String::from("|")];
+                let type_str = match node {
+                    syn::BinOp::Add(Add) => {arith.remove(0); arith},
+                    syn::BinOp::Sub(Sub) => {arith.remove(1); arith},
+                    syn::BinOp::Mul(Star) => {arith.remove(2); arith},
+                    syn::BinOp::Div(Div) => {arith.remove(3); arith},
+                    syn::BinOp::Rem(Rem) => {arith.remove(4); arith},
+                    // syn::BinOp::And(AndAnd) => {arith.remove(1); arith},
+                    // syn::BinOp::Or(OrOr) => String::from("||"),
+                    syn::BinOp::BitXor(Caret) => {bit.remove(0); bit},
+                    syn::BinOp::BitAnd(And) => {bit.remove(1); bit},
+                    syn::BinOp::BitOr(Or) => {bit.remove(2); bit},
+                    
+                    _ => vec![String::from("+")],
+                };
+                let node_pos= Pos {
+                    start_line : start.line,
+                    start_column: start.column,
+                    end_line : end.line,
+                    end_column: end.column,
+                    start_type: type_str,
+                };
+                self.BinOps.push(node_pos);    
+            }
+            
             visit_mut::visit_bin_op_mut(self, node);
-
+        } else {
+            if start.line == self.Target.start_line &&
+            start.column == self.Target.start_column &&
+            end.line == self.Target.end_line &&
+            end.column == self.Target.end_column &&
+            self.Target.start_type.len() > 0  {
+                let _op = self.Target.start_type.pop().unwrap();
+                match _op.as_str() {
+                    "+" => {*node = syn::BinOp::Add(syn::token::Add(node.span().clone()));},
+                    "-" => {*node = syn::BinOp::Sub(syn::token::Sub(node.span().clone()));},
+                    "*" => {*node = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
+                    "/" => {*node = syn::BinOp::Div(syn::token::Div(node.span().clone()));},
+                    "%" => {*node = syn::BinOp::Rem(syn::token::Rem(node.span().clone()));},
+                    "^" => {*node = syn::BinOp::BitXor(syn::token::Caret(node.span().clone()));},
+                    "&" => {*node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));},
+                    "|" => {*node = syn::BinOp::BitOr(syn::token::Or(node.span().clone()));},                    
+                    _ => {},
+                }               
+            }
         }
     }
 }
@@ -191,38 +242,48 @@ impl<'ast> VisitMut for BinOpVisitor<'ast> {
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
     let args: Vec<String> = env::args().collect();
     let example_source = fs::read_to_string(&file).expect("Something went wrong reading the file");
-    
-    let mut _binopvisitor = BinOpVisitor { BinOps: Vec::new(), Line: num_line, Column: 0, Covered: HashSet::new(), Prevsize: 0};
-
-    // If rustfmt doesn't exist, install it
-    Command::new("rustup")
-            .arg("component")
-            .arg("add")
-            .arg("rustfmt")
-            .spawn()
-            .expect("rustup command failed to start");
-    
-    loop {
-        // Since there can be multiple same operators in same line,
-        // so read original source code everytime and mutate only one operator at once
-        let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-        _binopvisitor.visit_file_mut(&mut syntax_tree);
-
-        if _binopvisitor.Prevsize == _binopvisitor.Covered.len() {
-            break;
-        } else {
-            let mut fz = fs::File::create(format!("{}{}{}", "mutated",_binopvisitor.Column,".rs")).unwrap();
-    
-            fz.write_all(quote!(#syntax_tree).to_string().as_bytes());
-            _binopvisitor.Prevsize += 1;
-    
+    let mut for_strong = syn::parse_file(&example_source).unwrap();
+    let for_weak = syn::parse_file(&example_source).unwrap();
+    let mut _binopvisitor = BinOpVisitor { BinOps: Vec::new(), Line: num_line, Column: 0, Covered: HashSet::new(), Prevsize: 0, Strong: Rc::new(for_strong), Weak: Weak::new(), Ptr: &for_weak, Search: true, Target:  Pos {
+        start_line : 0,
+        start_column: 0,
+        end_line : 0,
+        end_column: 0,
+        start_type: vec![String::from("+")],
+    }};
+    // _binopvisitor.Weak = Rc::downgrade(&_binopvisitor.Strong);
+    let mut syntax_tree = syn::parse_file(&example_source).unwrap();
+        
+    _binopvisitor.visit_file_mut(&mut syntax_tree);
+    _binopvisitor.Search = false;
+    // for pos in _binopvisitor.BinOps.clone().iter() {
+    let mut idx = 0;
+    for n in 0.._binopvisitor.BinOps.len() {
+        let pos = &_binopvisitor.BinOps[n];
+        // println!("{} {} {} {} {}", pos.start_line, pos.start_column, pos.end_line, pos.end_column, pos.start_type);
+        _binopvisitor.Target = Pos {
+            start_line: pos.start_line, 
+            start_column : pos.start_column,
+            end_line : pos.end_line,
+            end_column : pos.end_column, 
+            start_type : pos.start_type.clone(),
+        };
+        for m in 0..pos.start_type.len() {
+            let mut new_syntax_tree = syn::parse_file(&example_source).unwrap();
+            _binopvisitor.visit_file_mut(&mut new_syntax_tree);
+            let mut fz = fs::File::create(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs")).unwrap();
+        
+            fz.write_all(quote!(#new_syntax_tree).to_string().as_bytes());
+                
+        
             // Format mutated source code.
             Command::new("rustfmt")
-                    .arg(format!("{}{}{}", "mutated",_binopvisitor.Column,".rs"))
+                    .arg(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
-                }
+            idx += 1;
+        }
+        
     }
-
     return "hello".to_string(); // temporary return value
 }
