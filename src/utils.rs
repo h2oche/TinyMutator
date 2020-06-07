@@ -32,3 +32,10 @@ pub fn get_cwd() -> String {
         None => panic!("Failed to Get Current Working Directory Path String"),
     }
 }
+
+/**
+ * Print type of an object
+ */
+pub fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
