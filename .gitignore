@@ -1,2 +1,2 @@
 target/
-mutated.rs
+mutated*.rs
