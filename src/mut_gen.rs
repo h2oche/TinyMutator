@@ -1,24 +1,54 @@
 extern crate proc_macro;
+extern crate proc_macro2;
 extern crate syn;
-
 use proc_macro::{TokenStream, TokenTree};
-use quote::quote_spanned;
+use proc_macro2::Span;
+use quote::{quote, quote_spanned};
 use rand::seq::SliceRandom;
-use std::{cmp, env, fs, io::prelude::*, str::FromStr};
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Expr, Result, Stmt, Type};
+use std::{
+    env, fs,
+    io::prelude::*,
+    io::{self, BufRead},
+    path::Path,
+    process::Command,
+    str::FromStr,
+    vec,
+};
+use syn::{
+    parse_macro_input, parse_quote,
+    spanned::Spanned,
+    visit::{self, Visit},
+    visit_mut::{self, VisitMut},
+    DeriveInput, Expr, File, Item, ItemFn, Lit, LitInt, Result, Stmt, Type,
+};
 
 /**
  * Modify specific line of given file
 */
 pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
+    println!("filename : {}", file);
+    println!("line : {}", num_line);
+
     let mut constants = vec!["0", "1", "-1"];
+
+    let args: Vec<String> = env::args().collect();
+    let file = &args[1];
     let content = fs::read_to_string(file).expect("Something went wrong reading the file");
 
+    println!("{:#?}", content);
     let ast = syn::parse_file(&content);
-    let lines = content.split("\r\n");
-    let mut lines_list: Vec<_> = content.split("\r\n").collect();
+    // for item in ast.items.iter() {
+    //     match item {
+    //         _ => {
+    //             print_type_of(item)
+    //         },
+    //     }
+    // }
+    // println!("Hello");
 
+    let lines = content.split("\r\n");
     for line in lines {
+        // println!("{:#?}", line);
         let mut expr = syn::parse_str::<Stmt>(line);
         match expr {
             // statements are divided into 4 types(https://docs.rs/syn/1.0.30/syn/enum.Stmt.html)
@@ -54,6 +84,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                 println!("{}", error);
             }
         }
+        // println!("\n\n\n\n\n");
     }
 
     let (start, end) = find_min_parsable_lines(lines_list.clone(), num_line);
@@ -62,6 +93,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     println!("{:?}", expr_to_mutate);
     match expr_to_mutate {
         Ok(stmt) => {
+            println!("{:#?}", stmt);
             match stmt {
                 syn::Stmt::Local(local) => {
                     // let binding
@@ -89,7 +121,29 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             return lines_list.join("\t\r");
                         }
                         _ => {}
+                    // constant (Is typecheck required?)
+                    let mut new_constant_vec: Vec<_> = constants
+                        .choose_multiple(&mut rand::thread_rng(), 1)
+                        .collect();
+                    let mut new_constant = new_constant_vec[0];
+                    println!("\n\n\n\n\ngg");
+                    println!("{:?}", new_constant);
+                    let mut const_expr: Vec<_> = line_tmp.split("=").collect();
+                    while const_expr[1].trim_end_matches(";").trim() == *new_constant {
+                        new_constant_vec = constants
+                            .choose_multiple(&mut rand::thread_rng(), 1)
+                            .collect();
+                        new_constant = new_constant_vec[0];
                     }
+                    let tmp = const_expr[0].to_string();
+                    let const_string =
+                        tmp + &("= ".to_string()) + new_constant + &(";".to_string());
+                    println!("{:#?}", const_string);
+                    println!("\n\n\n\n\n");
+                    lines_list[num_line - 1] = &const_string;
+                    println!("{:#?}", lines_list.join("\t\r"));
+                    // println!("{:#?}", syn::parse_file(&(lines_list.join("\t\r"))));
+                    return lines_list.join("\t\r");
                 }
                 syn::Stmt::Expr(expr) => (),
                 syn::Stmt::Semi(expr, semi) => (),
@@ -102,7 +156,8 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
             // println!("{}", error);
         }
     }
-    return "hello".to_string(); // temporary value
+
+    return "hello".to_string(); // temporary return value
 }
 
 /**
@@ -126,6 +181,35 @@ pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (us
                 Err(error) => {}
             }
         }
+        visit_mut::visit_bin_op_mut(self, node);
     }
-    return (0, splitted_file.len());
+}
+
+pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
+    let args: Vec<String> = env::args().collect();
+    let file2 = &args[1];
+    let example_source = fs::read_to_string(file2).expect("Something went wrong reading the file");
+    let mut syntax_tree = syn::parse_file(&example_source).unwrap();
+    BinOpVisitor.visit_file_mut(&mut syntax_tree);
+    
+    let mut fz = fs::File::create("mutated.rs").unwrap();
+    let sst = quote!(#syntax_tree).to_string().as_bytes();
+    fz.write_all(quote!(#syntax_tree).to_string().as_bytes());
+    
+
+
+    // If rustfmt doesn't exist, install it
+    Command::new("rustup")
+            .arg("component")
+            .arg("add")
+            .arg("rustfmt")
+            .spawn()
+            .expect("rustup command failed to start");
+    
+    // Format mutated source code.
+    Command::new("rustfmt")
+            .arg("mutated.rs")
+            .spawn()
+            .expect("rustfmt command failed to start");
+    return "hello".to_string(); // temporary return value
 }
