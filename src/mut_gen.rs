@@ -1,27 +1,18 @@
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate syn;
-use proc_macro::{TokenStream, TokenTree};
-use proc_macro2::Span;
-use quote::{quote, quote_spanned};
+use quote::{quote};
 use rand::seq::SliceRandom;
 use std::{
     env, fs,
     io::prelude::*,
-    io::{self, BufRead},
-    path::Path,
     process::Command,
-    str::FromStr,
     vec,
-    collections::HashSet,
-    rc::{Rc, Weak},
 };
 use syn::{
-    parse_macro_input, parse_quote,
     spanned::Spanned,
-    visit::{self, Visit},
     visit_mut::{self, VisitMut},
-    DeriveInput, Expr, File, Item, ItemFn, Lit, LitInt, Result, Stmt, Type,
+     Expr,  Stmt,
 };
 
 /**
@@ -160,18 +151,18 @@ struct Pos {
     start_type: Vec<String>,
 }
 
-struct BinOpVisitor<'ast> {
-    BinOps: Vec<Pos>,
-    // BinOps: Vec<&'ast mut syn::BinOp>,
-    Line: usize,
-    Column: usize,
-    Covered: HashSet<usize>,
-    Prevsize: usize,
-    Strong: Rc<File>,
-    Weak: Weak<File>,
-    Ptr: &'ast File,
-    Search: bool,
-    Target: Pos,
+struct BinOpVisitor {
+    vec_pos: Vec<Pos>,
+    
+    // vec_pos: Vec<&'ast mut syn::BinOp>,
+    struct_line: usize,
+    struct_column: usize,
+    
+    
+    
+    
+    search: bool,
+    target: Pos,
     
 }
 
@@ -182,34 +173,33 @@ struct BinOpVisitor<'ast> {
 // }
 
 
-impl<'ast> VisitMut for BinOpVisitor<'ast> {
+impl<'ast> VisitMut for BinOpVisitor {
     fn visit_bin_op_mut(&mut self, node: &mut syn::BinOp) {
         let start = node.span().start();
         let end = node.span().end();
-        let mut isTarget = true;
-        if self.Search {
-            if start.line <= self.Line && self.Line <= end.line {
+        if self.search {
+            if start.line <= self.struct_line && self.struct_line <= end.line {
                 let mut arith = vec![String::from("+"), String::from("-"), String::from("*"), String::from("/"), String::from("%")];
                 let mut bit = vec![String::from("^"), String::from("&"), String::from("|")];
                 let mut relational = vec![String::from("=="), String::from("<"), String::from("<="), String::from("!=") ,String::from(">="), String::from(">")];
                 let type_str = match node {
                     // Arithmetic Operators
-                    syn::BinOp::Add(Add) => {arith.remove(0); arith},
-                    syn::BinOp::Sub(Sub) => {arith.remove(1); arith},
-                    syn::BinOp::Mul(Star) => {arith.remove(2); arith},
-                    syn::BinOp::Div(Div) => {arith.remove(3); arith},
-                    syn::BinOp::Rem(Rem) => {arith.remove(4); arith},
+                    syn::BinOp::Add(_add) => {arith.remove(0); arith},
+                    syn::BinOp::Sub(_sub) => {arith.remove(1); arith},
+                    syn::BinOp::Mul(_star) => {arith.remove(2); arith},
+                    syn::BinOp::Div(_div) => {arith.remove(3); arith},
+                    syn::BinOp::Rem(_rem) => {arith.remove(4); arith},
                     // Bitwise Operators
-                    syn::BinOp::BitXor(Caret) => {bit.remove(0); bit},
-                    syn::BinOp::BitAnd(And) => {bit.remove(1); bit},
-                    syn::BinOp::BitOr(Or) => {bit.remove(2); bit},
+                    syn::BinOp::BitXor(_caret) => {bit.remove(0); bit},
+                    syn::BinOp::BitAnd(_and) => {bit.remove(1); bit},
+                    syn::BinOp::BitOr(_or) => {bit.remove(2); bit},
                     // Relational Operators
-                    syn::BinOp::Eq(EqEq) => {relational.remove(0); relational},
-                    syn::BinOp::Lt(Lt) => {relational.remove(1); relational},
-                    syn::BinOp::Le(Le) => {relational.remove(2); relational},
-                    syn::BinOp::Ne(Ne) => {relational.remove(3); relational},
-                    syn::BinOp::Ge(Ge) => {relational.remove(4); relational},
-                    syn::BinOp::Gt(Gt) => {relational.remove(5); relational},
+                    syn::BinOp::Eq(_eqeq) => {relational.remove(0); relational},
+                    syn::BinOp::Lt(_lt) => {relational.remove(1); relational},
+                    syn::BinOp::Le(_le) => {relational.remove(2); relational},
+                    syn::BinOp::Ne(_ne) => {relational.remove(3); relational},
+                    syn::BinOp::Ge(_ge) => {relational.remove(4); relational},
+                    syn::BinOp::Gt(_gt) => {relational.remove(5); relational},
                     
                     _ => vec![String::from("+")],
                 };
@@ -220,17 +210,17 @@ impl<'ast> VisitMut for BinOpVisitor<'ast> {
                     end_column: end.column,
                     start_type: type_str,
                 };
-                self.BinOps.push(node_pos);    
+                self.vec_pos.push(node_pos);    
             }
             
             visit_mut::visit_bin_op_mut(self, node);
         } else {
-            if start.line == self.Target.start_line &&
-            start.column == self.Target.start_column &&
-            end.line == self.Target.end_line &&
-            end.column == self.Target.end_column &&
-            self.Target.start_type.len() > 0  {
-                let _op = self.Target.start_type.pop().unwrap();
+            if start.line == self.target.start_line &&
+            start.column == self.target.start_column &&
+            end.line == self.target.end_line &&
+            end.column == self.target.end_column &&
+            self.target.start_type.len() > 0  {
+                let _op = self.target.start_type.pop().unwrap();
                 match _op.as_str() {
                     // Arithmetic Operators
                     "+" => {*node = syn::BinOp::Add(syn::token::Add(node.span().clone()));},
@@ -255,38 +245,83 @@ impl<'ast> VisitMut for BinOpVisitor<'ast> {
             }
         }
     }
+
+    fn visit_expr_binary_mut(&mut self, node: &mut syn::ExprBinary) {
+        let start = node.span().start();
+        let end = node.span().end();
+        if self.search {
+            if start.line <= self.struct_line && self.struct_line <= end.line {
+                let type_str = vec![String::from("l"), String::from("r")];
+                
+                let node_pos= Pos {
+                    start_line : start.line,
+                    start_column: start.column,
+                    end_line : end.line,
+                    end_column: end.column,
+                    start_type: type_str,
+                };
+                self.vec_pos.push(node_pos);    
+            }
+            
+            visit_mut::visit_expr_binary_mut(self, node);
+        } else {
+            if start.line == self.target.start_line &&
+            start.column == self.target.start_column &&
+            end.line == self.target.end_line &&
+            end.column == self.target.end_column &&
+            self.target.start_type.len() > 0  {
+                let _op = self.target.start_type.pop().unwrap();
+                // let digits = Lit::Int.base10_digits();
+                
+                // let unsuffixed: LitInt = syn::parse_str(digits).unwrap();
+                // *node.left = parse_quote!(i32::1!(#unsuffixed));
+                match _op.as_str() {
+                    // Arithmetic Operators
+                    // "al" => {*node = syn::BinOp::Add(syn::token::Add(node.span().clone()));},
+                    "l" => {*(node.left) = syn::parse_str::<Expr>("1").unwrap(); node.op = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
+                    "r" => {*(node.right) = syn::parse_str::<Expr>("1").unwrap(); node.op = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
+
+                    
+                    // _ => {node.op = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
+                    
+                    // _ => {*node.left = Expr::Lit{attrs : vec![], lit : Lit::Int(syn::Litinit()) };}
+                    _ => {},
+
+                }               
+            }
+        }
+    }
 }
 
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
-    let args: Vec<String> = env::args().collect();
+    
+
     let example_source = fs::read_to_string(&file).expect("Something went wrong reading the file");
-    let mut for_strong = syn::parse_file(&example_source).unwrap();
-    let for_weak = syn::parse_file(&example_source).unwrap();
-    let mut _binopvisitor = BinOpVisitor { BinOps: Vec::new(), Line: num_line, Column: 0, Covered: HashSet::new(), Prevsize: 0, Strong: Rc::new(for_strong), Weak: Weak::new(), Ptr: &for_weak, Search: true, Target:  Pos {
+    
+    let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: num_line, struct_column: 0, search: true, target:  Pos {
         start_line : 0,
         start_column: 0,
         end_line : 0,
         end_column: 0,
         start_type: vec![String::from("+")],
     }};
-    // _binopvisitor.Weak = Rc::downgrade(&_binopvisitor.Strong);
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
         
     _binopvisitor.visit_file_mut(&mut syntax_tree);
-    _binopvisitor.Search = false;
-    // for pos in _binopvisitor.BinOps.clone().iter() {
+    _binopvisitor.search = false;
+    // for pos in _binopvisitor.vec_pos.clone().iter() {
     let mut idx = 0;
-    for n in 0.._binopvisitor.BinOps.len() {
-        let pos = &_binopvisitor.BinOps[n];
+    for _n in 0.._binopvisitor.vec_pos.len() {
+        let pos = &_binopvisitor.vec_pos[_n];
         // println!("{} {} {} {} {}", pos.start_line, pos.start_column, pos.end_line, pos.end_column, pos.start_type);
-        _binopvisitor.Target = Pos {
+        _binopvisitor.target = Pos {
             start_line: pos.start_line, 
             start_column : pos.start_column,
             end_line : pos.end_line,
             end_column : pos.end_column, 
             start_type : pos.start_type.clone(),
         };
-        for m in 0..pos.start_type.len() {
+        for _m in 0..pos.start_type.len() {
             let mut new_syntax_tree = syn::parse_file(&example_source).unwrap();
             _binopvisitor.visit_file_mut(&mut new_syntax_tree);
             let mut fz = fs::File::create(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs")).unwrap();
