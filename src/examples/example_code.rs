@@ -15,7 +15,8 @@ fn main() {
 }
 
 fn get(x: i32) -> i32 {
-    1
+    if x > 1 { return 1; }
+    3
 }
 
 fn get_true(x: bool) -> bool {

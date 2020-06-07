@@ -22,12 +22,12 @@ fn main() {
     if args.len() < 2 {
         panic!("No Specified Project Directory");
     }
-    let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
+    // let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
 
-    let trace_info = cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
-    println!("{:?}", trace_info);
+    // let trace_info = cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
+    // println!("{:?}", trace_info);
 
-    mut_gen::mutate_file_by_line(args[1].clone(), 1);
-    // mut_gen::mutate_file_by_line3(args[1].clone(), 1);
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
+    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
+    mut_gen::mutate_file_by_line3(args[1].clone(), 10);
 }

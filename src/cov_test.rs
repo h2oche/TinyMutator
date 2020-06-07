@@ -23,7 +23,7 @@ pub fn run_test(path: String) -> Option<String> {
     // Make a subprocess & Run 'cargo tarpaulin'
     let _ = Command::new("cargo")
         .args(&["install", "cargo-tarpaulin"])
-        .status();                          // Install tarpaulin
+        .status(); // Install tarpaulin
     let mut shell = Command::new("cargo");
     shell.args(&[
         "tarpaulin",
