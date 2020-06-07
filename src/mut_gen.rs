@@ -2,17 +2,22 @@ extern crate proc_macro;
 extern crate proc_macro2;
 extern crate syn;
 use quote::{quote};
-use rand::seq::SliceRandom;
+use rand::{
+    seq::SliceRandom,
+    Rng,
+};
 use std::{
     env, fs,
     io::prelude::*,
     process::Command,
+    cmp,
     vec,
 };
 use syn::{
     spanned::Spanned,
     visit_mut::{self, VisitMut},
-     Expr,  Stmt,
+    Expr,
+    Stmt,
 };
 
 /**
@@ -47,7 +52,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let file = &args[1];
     let content = fs::read_to_string(file).expect("Something went wrong reading the file");
 
-    println!("{:#?}", content);
+    // println!("{:#?}", content);
     let ast = syn::parse_file(&content);
 
     let lines = content.split("\r\n");
@@ -78,13 +83,13 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                         // println!("{:#?}", expr);
                     }
                     syn::Stmt::Semi(expr, semi) => {
-                        println!("not a case");
+                        // println!("not a case");
                     }
                 }
             }
             Err(error) => {
                 // syntax error of target file
-                println!("{}", error);
+                // println!("{}", error);
             }
         }
     }
@@ -93,18 +98,34 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
     let line_to_parse = lines_vec[start..end].join("\t\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
-    println!("{:?}", expr_to_mutate);
+    println!("{:?}", line_to_parse);
     match expr_to_mutate {
         Ok(stmt) => {
-            println!("{:#?}", stmt);
+            // println!("{:#?}", stmt);
             match stmt {
                 syn::Stmt::Local(local) => {
-                    // let binding
+                    // let binding(negation, arithmetic operator deletion)
+                    let mut let_binding_expr: Vec<_> = line_to_parse.split("=").collect();
+                    let mut random_number = rand::thread_rng();
+                    // println!("Integer: {}", random_number.gen_range(0, 2));
+                    match random_number.gen_range(0, 2) {
+                        0 => { // negation
+                            let let_binding_string =
+                                let_binding_expr[0].to_string() + &("= ".to_string()) + &("-".to_string()) + let_binding_expr[1].trim();
+                            lines_vec[num_line - 1] = &let_binding_string;
+                            println!("{:?}", lines_vec[num_line - 1]);
+                            return lines_vec.join("\t\r");
+                        }
+                        1 => { // arithmetic operator deletion
+
+                        }
+                        _ => {}
+                    }
                 }
                 syn::Stmt::Item(item) => {
                     // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
                     match item {
-                        syn::Item::Const(itemConst) => {
+                        syn::Item::Const(itemConst) => { // constant replacement
                             let mut new_constant_vec: Vec<_> = constants
                                 .choose_multiple(&mut rand::thread_rng(), 1)
                                 .collect();
@@ -152,9 +173,6 @@ struct BinOpVisitor {
     struct_line: usize,
     struct_column: usize,
     
-    
-    
-    
     search: bool,
     target: Pos,
     
@@ -165,7 +183,6 @@ struct BinOpVisitor {
 //         self.visit_bin_op_mut(node: &mut syn::BinOp);
 //     }
 // }
-
 
 impl<'ast> VisitMut for BinOpVisitor {
     fn visit_bin_op_mut(&mut self, node: &mut syn::BinOp) {
@@ -235,7 +252,7 @@ impl<'ast> VisitMut for BinOpVisitor {
                     ">" => {*node = syn::BinOp::Gt(syn::token::Gt(node.span().clone()));},
 
                     _ => {},
-                }               
+                }
             }
         }
     }
@@ -280,8 +297,7 @@ impl<'ast> VisitMut for BinOpVisitor {
                     
                     // _ => {*node.left = Expr::Lit{attrs : vec![], lit : Lit::Int(syn::Litinit()) };}
                     _ => {},
-
-                }               
+                }
             }
         }
     }
