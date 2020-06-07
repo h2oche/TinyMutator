@@ -13,6 +13,7 @@ use std::{
     process::Command,
     str::FromStr,
     vec,
+    collections::HashSet,
 };
 use syn::{
     parse_macro_input, parse_quote,
@@ -25,9 +26,9 @@ use syn::{
 /**
  * Print type of an object
  */
-// fn print_type_of<T>(_: &T) {
-//     println!("{}", std::any::type_name::<T>())
-// }
+/*fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}*/
 
 /**
  * Modify specific line of given file
@@ -150,29 +151,48 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     return "hello".to_string(); // temporary return value
 }
 
-struct BinOpVisitor;
-impl VisitMut for BinOpVisitor {
+
+
+struct BinOpVisitor<'ast> {
+    BinOps: Vec<&'ast mut syn::BinOp>,
+    Line: usize,
+    Column: usize,
+    Covered: HashSet<usize>,
+    Prevsize: usize,
+}
+
+
+impl<'ast> VisitMut for BinOpVisitor<'ast> {
     fn visit_bin_op_mut(&mut self, node: &mut syn::BinOp) {
-        if let syn::BinOp::BitOr(or) = &node {
-            let digits = or.span();
-            *node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));
+        let start = node.span().start();
+        let end = node.span().end();
+        let mut isTarget = true;
+        if !(start.line <= self.Line && self.Line <= end.line) {
+            isTarget = false;
         }
-        visit_mut::visit_bin_op_mut(self, node);
+        if let syn::BinOp::BitOr(or) = &node {
+            if self.Covered.contains(&end.column) || self.Prevsize < self.Covered.len() {
+                isTarget = false;
+            } 
+        } else {
+            isTarget = false;
+        }
+        if isTarget {
+            self.Covered.insert(end.column.clone());
+            self.Column = end.column;
+            *node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));
+        } else {
+            visit_mut::visit_bin_op_mut(self, node);
+
+        }
     }
 }
 
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
     let args: Vec<String> = env::args().collect();
-    let file2 = &args[1];
-    let example_source = fs::read_to_string(file2).expect("Something went wrong reading the file");
-    let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    BinOpVisitor.visit_file_mut(&mut syntax_tree);
+    let example_source = fs::read_to_string(&file).expect("Something went wrong reading the file");
     
-    let mut fz = fs::File::create("mutated.rs").unwrap();
-    let sst = quote!(#syntax_tree).to_string().as_bytes();
-    fz.write_all(quote!(#syntax_tree).to_string().as_bytes());
-    
-
+    let mut _binopvisitor = BinOpVisitor { BinOps: Vec::new(), Line: num_line, Column: 0, Covered: HashSet::new(), Prevsize: 0};
 
     // If rustfmt doesn't exist, install it
     Command::new("rustup")
@@ -182,10 +202,27 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
             .spawn()
             .expect("rustup command failed to start");
     
-    // Format mutated source code.
-    Command::new("rustfmt")
-            .arg("mutated.rs")
-            .spawn()
-            .expect("rustfmt command failed to start");
+    loop {
+        // Since there can be multiple same operators in same line,
+        // so read original source code everytime and mutate only one operator at once
+        let mut syntax_tree = syn::parse_file(&example_source).unwrap();
+        _binopvisitor.visit_file_mut(&mut syntax_tree);
+
+        if _binopvisitor.Prevsize == _binopvisitor.Covered.len() {
+            break;
+        } else {
+            let mut fz = fs::File::create(format!("{}{}{}", "mutated",_binopvisitor.Column,".rs")).unwrap();
+    
+            fz.write_all(quote!(#syntax_tree).to_string().as_bytes());
+            _binopvisitor.Prevsize += 1;
+    
+            // Format mutated source code.
+            Command::new("rustfmt")
+                    .arg(format!("{}{}{}", "mutated",_binopvisitor.Column,".rs"))
+                    .spawn()
+                    .expect("rustfmt command failed to start");
+                }
+    }
+
     return "hello".to_string(); // temporary return value
 }
