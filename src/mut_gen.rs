@@ -191,17 +191,25 @@ impl<'ast> VisitMut for BinOpVisitor<'ast> {
             if start.line <= self.Line && self.Line <= end.line {
                 let mut arith = vec![String::from("+"), String::from("-"), String::from("*"), String::from("/"), String::from("%")];
                 let mut bit = vec![String::from("^"), String::from("&"), String::from("|")];
+                let mut relational = vec![String::from("=="), String::from("<"), String::from("<="), String::from("!=") ,String::from(">="), String::from(">")];
                 let type_str = match node {
+                    // Arithmetic Operators
                     syn::BinOp::Add(Add) => {arith.remove(0); arith},
                     syn::BinOp::Sub(Sub) => {arith.remove(1); arith},
                     syn::BinOp::Mul(Star) => {arith.remove(2); arith},
                     syn::BinOp::Div(Div) => {arith.remove(3); arith},
                     syn::BinOp::Rem(Rem) => {arith.remove(4); arith},
-                    // syn::BinOp::And(AndAnd) => {arith.remove(1); arith},
-                    // syn::BinOp::Or(OrOr) => String::from("||"),
+                    // Bitwise Operators
                     syn::BinOp::BitXor(Caret) => {bit.remove(0); bit},
                     syn::BinOp::BitAnd(And) => {bit.remove(1); bit},
                     syn::BinOp::BitOr(Or) => {bit.remove(2); bit},
+                    // Relational Operators
+                    syn::BinOp::Eq(EqEq) => {relational.remove(0); relational},
+                    syn::BinOp::Lt(Lt) => {relational.remove(1); relational},
+                    syn::BinOp::Le(Le) => {relational.remove(2); relational},
+                    syn::BinOp::Ne(Ne) => {relational.remove(3); relational},
+                    syn::BinOp::Ge(Ge) => {relational.remove(4); relational},
+                    syn::BinOp::Gt(Gt) => {relational.remove(5); relational},
                     
                     _ => vec![String::from("+")],
                 };
@@ -224,14 +232,24 @@ impl<'ast> VisitMut for BinOpVisitor<'ast> {
             self.Target.start_type.len() > 0  {
                 let _op = self.Target.start_type.pop().unwrap();
                 match _op.as_str() {
+                    // Arithmetic Operators
                     "+" => {*node = syn::BinOp::Add(syn::token::Add(node.span().clone()));},
                     "-" => {*node = syn::BinOp::Sub(syn::token::Sub(node.span().clone()));},
                     "*" => {*node = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
                     "/" => {*node = syn::BinOp::Div(syn::token::Div(node.span().clone()));},
                     "%" => {*node = syn::BinOp::Rem(syn::token::Rem(node.span().clone()));},
+                    // Bitwise Operators
                     "^" => {*node = syn::BinOp::BitXor(syn::token::Caret(node.span().clone()));},
                     "&" => {*node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));},
-                    "|" => {*node = syn::BinOp::BitOr(syn::token::Or(node.span().clone()));},                    
+                    "|" => {*node = syn::BinOp::BitOr(syn::token::Or(node.span().clone()));},
+                    // Relational Operators
+                    "==" => {*node = syn::BinOp::Eq(syn::token::EqEq(node.span().clone()));},
+                    "<" => {*node = syn::BinOp::Lt(syn::token::Lt(node.span().clone()));},
+                    "<=" => {*node = syn::BinOp::Le(syn::token::Le(node.span().clone()));},
+                    "!=" => {*node = syn::BinOp::Ne(syn::token::Ne(node.span().clone()));},
+                    ">=" => {*node = syn::BinOp::Ge(syn::token::Ge(node.span().clone()));},
+                    ">" => {*node = syn::BinOp::Gt(syn::token::Gt(node.span().clone()));},
+
                     _ => {},
                 }               
             }
