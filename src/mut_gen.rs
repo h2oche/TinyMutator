@@ -13,6 +13,7 @@ use std::{
     process::Command,
     str::FromStr,
     vec,
+    cmp,
     collections::HashSet,
 };
 use syn::{
@@ -23,13 +24,66 @@ use syn::{
     DeriveInput, Expr, File, Item, ItemFn, Lit, LitInt, Result, Stmt, Type,
 };
 
+struct BinOpVisitor<'ast> {
+    BinOps: Vec<&'ast mut syn::BinOp>,
+    Line: usize,
+    Column: usize,
+    Covered: HashSet<usize>,
+    Prevsize: usize,
+}
+
+impl<'ast> VisitMut for BinOpVisitor<'ast> {
+    fn visit_bin_op_mut(&mut self, node: &mut syn::BinOp) {
+        let start = node.span().start();
+        let end = node.span().end();
+        let mut isTarget = true;
+        if !(start.line <= self.Line && self.Line <= end.line) {
+            isTarget = false;
+        }
+        if let syn::BinOp::BitOr(or) = &node {
+            if self.Covered.contains(&end.column) || self.Prevsize < self.Covered.len() {
+                isTarget = false;
+            } 
+        } else {
+            isTarget = false;
+        }
+        if isTarget {
+            self.Covered.insert(end.column.clone());
+            self.Column = end.column;
+            *node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));
+        } else {
+            visit_mut::visit_bin_op_mut(self, node);
+
+        }
+    }
+}
+
+/** 
+ * Get smallest list of lines which is parsable with ast
+*/
+pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (usize, usize) {
+    for j in 1..cmp::max(splitted_file.len() - num_line, num_line - 0) { // length
+        for i in 0..j {
+            if num_line + i - j <= 0 || num_line + i > splitted_file.len() { continue; }
+            // println!("{:#?}", &splitted_file[(num_line + i - j)..(num_line + i)].join("\t\r"));
+            // println!("{} {}", num_line + i - j, num_line + i);
+            match :: syn::parse_str::<Stmt>(&splitted_file[(num_line + i - j)..(num_line + i)].join("\t\r")) {
+                Ok(stmt) => {
+                    return (num_line + i - j, num_line + i);
+                },
+                Err(error) => {},
+            }
+        }
+    }
+    return (0, splitted_file.len());
+}
+
 /**
  * Modify specific line of given file
 */
 pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
-    println!("filename : {}", file);
-    println!("line : {}", num_line);
-
+    // println!("filename : {}", file);
+    // println!("line : {}", num_line);
     let mut constants = vec!["0", "1", "-1"];
 
     let args: Vec<String> = env::args().collect();
@@ -87,7 +141,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     }
 
     let mut lines_vec: Vec<_> = content.split("\r\n").collect();
-    let (start, end) = find_min_parsable_lines(&lines_vec, num_line);
+    let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
     let line_to_parse = lines_vec[start..end].join("\t\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
     println!("{:?}", expr_to_mutate);
@@ -119,6 +173,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             lines_vec[num_line - 1] = &const_string;
                             return lines_vec.join("\t\r");
                         }
+                        _ => { () },
                     }
                 }
                 syn::Stmt::Expr(expr) => { () },
@@ -131,44 +186,6 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
         }
     }
     return "hello".to_string(); // temporary return value
-}
-
-
-
-struct BinOpVisitor<'ast> {
-    BinOps: Vec<&'ast mut syn::BinOp>,
-    Line: usize,
-    Column: usize,
-    Covered: HashSet<usize>,
-    Prevsize: usize,
-}
-
-
-impl<'ast> VisitMut for BinOpVisitor<'ast> {
-    fn visit_bin_op_mut(&mut self, node: &mut syn::BinOp) {
-        let start = node.span().start();
-        let end = node.span().end();
-        let mut isTarget = true;
-        if !(start.line <= self.Line && self.Line <= end.line) {
-            isTarget = false;
-        }
-        if let syn::BinOp::BitOr(or) = &node {
-            if self.Covered.contains(&end.column) || self.Prevsize < self.Covered.len() {
-                isTarget = false;
-            } 
-        } else {
-            isTarget = false;
-        }
-        if isTarget {
-            self.Covered.insert(end.column.clone());
-            self.Column = end.column;
-            *node = syn::BinOp::BitAnd(syn::token::And(node.span().clone()));
-        } else {
-            visit_mut::visit_bin_op_mut(self, node);
-
-        }
-    }
-    return (0, splitted_file.len());
 }
 
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
@@ -204,7 +221,7 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
                     .arg(format!("{}{}{}", "mutated",_binopvisitor.Column,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
-                }
+        }
     }
 
     return "hello".to_string(); // temporary return value
