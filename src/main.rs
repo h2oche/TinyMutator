@@ -31,4 +31,5 @@ fn main() {
     // mut_gen::mutate_file_by_line3(args[1].clone(), 1);
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
     println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 18));
+    mut_gen::mutate_file_by_line3(args[1].clone(), 10);
 }
