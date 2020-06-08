@@ -6,6 +6,7 @@ fn get_fitness_function(x: i32, y: i32) -> i32 {
 
     return
         x + y / y - 2 * 3;
+
 }
 
 fn get_fitness_function2(x: i32, y: i32) {

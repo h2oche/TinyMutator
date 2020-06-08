@@ -113,7 +113,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
     // println!("\n\n\n{:?}\n\n\n", line_to_parse);
     // println!("{:?}", expr_to_mutate);
-    // println!{"{} {}", start, end};
+    println!{"{} {}", start, end};
     match expr_to_mutate {
         Ok(stmt) => {
             // println!("{:#?}", stmt);
@@ -130,7 +130,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             for i in start..end {
                                 lines_vec.remove(start);
                             }
-                            lines_vec[start] = &let_binding_string;
+                            lines_vec.insert(start, &let_binding_string);
                             return String::from("negation:")+&lines_vec.join("\r\n");
                         }
                         1 => { // arithmetic operator deletion
@@ -149,7 +149,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             for i in start..end {
                                 lines_vec.remove(start);
                             }
-                            lines_vec[start] = &tmp;
+                            lines_vec.insert(start, &tmp);
                             return String::from("arithmetic_deletion:")+&lines_vec.join("\r\n");
                         }
                         _ => {},
@@ -176,7 +176,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             for i in start..end {
                                 lines_vec.remove(start);
                             }
-                            lines_vec[start] = &const_string;
+                            lines_vec.insert(start, &const_string);
                             return String::from("constant_replacement:")+&lines_vec.join("\r\n");
                         }
                         _ => {},
@@ -199,7 +199,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                         for i in start..end {
                                             lines_vec.remove(start);
                                         }
-                                        lines_vec[start] = &void_method_call_string;
+                                        lines_vec.insert(start, &void_method_call_string);
                                         return String::from("call_:")+&lines_vec.join("\r\n");
                                     }
                                 },
@@ -222,7 +222,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                     for i in start..end {
                                         lines_vec.remove(start);
                                     }
-                                    lines_vec[start] = &return_string;
+                                    lines_vec.insert(start, &return_string);
                                     return String::from("return1:")+&lines_vec.join("\r\n");
                                 }
                                 1 => { // arithmetic operator deletion
@@ -241,7 +241,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                     for i in start..end {
                                         lines_vec.remove(start);
                                     }
-                                    lines_vec[start] = &tmp;
+                                    lines_vec.insert(start, &tmp);
                                     return String::from("return2:")+&lines_vec.join("\r\n");
                                 }
                                 _ => {},

@@ -36,7 +36,7 @@ fn main() {
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
     
     // println!("{:#?}", mut_gen::mutate_file_by_line(args[1].clone(), 26));
-    let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), 26);
+    let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), 7);
     for _x in mutated_result.iter() {
         println!("{} {} {}",_x.file_name, _x.target_line, _x.mutation);
     }
