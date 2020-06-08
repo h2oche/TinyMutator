@@ -112,8 +112,8 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
     let line_to_parse = lines_vec[start..end].join("\r\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
-    println!("\n\n\n{:?}\n\n\n", line_to_parse);
-    println!("{:?}", expr_to_mutate);
+    // println!("\n\n\n{:?}\n\n\n", line_to_parse);
+    // println!("{:?}", expr_to_mutate);
     // println!{"{} {}", start, end};
     match expr_to_mutate {
         Ok(stmt) => {
@@ -132,7 +132,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 lines_vec.remove(start);
                             }
                             lines_vec[start] = &let_binding_string;
-                            return lines_vec.join("\r\n");
+                            return String::from("negation:")+&lines_vec.join("\r\n");
                         }
                         1 => { // arithmetic operator deletion
                             let arithmetic_operators = vec!["+".to_string(), "-".to_string(), "*".to_string(), "/".to_string(), "%".to_string()];
@@ -148,7 +148,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 lines_vec.remove(start);
                             }
                             lines_vec[start] = &tmp;
-                            return lines_vec.join("\r\n");
+                            return String::from("arithmetic_deletion:")+&lines_vec.join("\r\n");
                         }
                         _ => {},
                     }
@@ -175,7 +175,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 lines_vec.remove(start);
                             }
                             lines_vec[start] = &const_string;
-                            return lines_vec.join("\r\n");
+                            return String::from("constant_replacement:")+&lines_vec.join("\r\n");
                         }
                         _ => {},
                     }
@@ -198,7 +198,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                             lines_vec.remove(start);
                                         }
                                         lines_vec[start] = &void_method_call_string;
-                                        return lines_vec.join("\r\n");
+                                        return String::from("call_:")+&lines_vec.join("\r\n");
                                     }
                                 },
                                 _ => {},
@@ -221,7 +221,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                         lines_vec.remove(start);
                                     }
                                     lines_vec[start] = &return_string;
-                                    return lines_vec.join("\r\n");
+                                    return String::from("return1:")+&lines_vec.join("\r\n");
                                 }
                                 1 => { // arithmetic operator deletion
                                     let arithmetic_operators = vec!["+".to_string(), "-".to_string(), "*".to_string(), "/".to_string(), "%".to_string()];
@@ -237,7 +237,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                         lines_vec.remove(start);
                                     }
                                     lines_vec[start] = &tmp;
-                                    return lines_vec.join("\r\n");
+                                    return String::from("return2:")+&lines_vec.join("\r\n");
                                 }
                                 _ => {},
                             }
@@ -252,7 +252,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
             // println!("{}", error);
         }
     }
-    return lines_vec.join("\r\n"); // temporary return value
+    return String::from("notmutated:")+&lines_vec.join("\r\n"); // temporary return value
 }
 
 struct Pos {
@@ -446,8 +446,9 @@ pub struct MutantInfo {
 }
 
 
+
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
-    let example_source = fs::read_to_string(&file).expect("Something went wrong reading the file");
+    let example_source = fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     
     // println!("{:#?} << ",syn::parse_str::<Pat>("_").unwrap());
     let mut ret = Vec::new();
@@ -496,5 +497,31 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
             idx += 1;
         }
     }
+    let woo = idx;
+    for _n in 0..20 {
+        let mutated_result1 : String = mutate_file_by_line(file.clone(), num_line.clone()).clone();
+        // .splitn(2,":").collect();
+        let mutated_result : Vec<&str> = mutated_result1.splitn(2,":").collect();
+
+        let mutated_file = mutated_result[1].clone();
+        let _muttype = mutated_result[0].to_string().clone();
+        if _muttype == "notmutated" {
+            continue;
+        }
+        let mut fz = fs::File::create(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs")).unwrap();
+        fz.write_all(mutated_file.as_bytes());
+        Command::new("rustfmt")
+                    .arg(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"))
+                    .spawn()
+                    .expect("rustfmt command failed to start");
+            
+            
+        ret.push(MutantInfo{file_name : format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
+        idx += 1;
+
+
+    }
+    println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
+    
     return ret;
 }
