@@ -32,7 +32,7 @@ fn main() {
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
     // mut_gen::mutate_file_by_line3(args[1].clone(), 10);
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 11));
-    println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
+    println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 12));
     let test_list = vec![String::from("combinations_no_collect")];
     // mut_test::run_mut_test(args[1].clone(), Some(test_list));
