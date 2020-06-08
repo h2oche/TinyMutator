@@ -1,4 +1,5 @@
 mod cov_test;
+mod mut_test;
 mod mut_gen;
 mod utils;
 use std::env;
@@ -29,5 +30,7 @@ fn main() {
 
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
-    mut_gen::mutate_file_by_line3(args[1].clone(), 10);
-}
+    //mut_gen::mutate_file_by_line3(args[1].clone(), 10);
+    let test_list = vec![String::from("combinations_no_collect")];
+    mut_test::run_mut_test(args[1].clone(), Some(test_list));
+}  
