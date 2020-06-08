@@ -1,6 +1,6 @@
 fn get_fitness_function(x: i32, y: i32) -> i32 {
     println!{"{}", x + y};
-    x + y
+    return x + y / y - 2 * 3;
 }
 
 fn get_fitness_function2(x: i32, y: i32) {
@@ -8,6 +8,7 @@ fn get_fitness_function2(x: i32, y: i32) {
 }
 
 fn main() {
-    get_fitness_function(1, 2);
-    get_fitness_function2(1, 2);
+    let test = vec!["one", "two", "two", "three"];
+    let index = test.iter().position(|&r| r == "two").unwrap();
+    println!("{}", index);
 }

@@ -62,8 +62,8 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
 
     // preprocess(find all constants and functions in file, ...)
     for i in 0..lines_vec.len() {
-        // let expr = syn::parse_str::<Stmt>(&lines_vec[i]);
-        // println!("{:?}", expr);
+        let expr2 = syn::parse_str::<Stmt>(&lines_vec[i]);
+        // println!("\n\n\n{:?}\n\n\n", expr2);
         // println!("{:#?}", line);
         let (start, end) = find_min_parsable_lines(lines_vec.clone(), i + 1);
         let line_to_parse = lines_vec[start..end].join("\r\n");
@@ -99,10 +99,10 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             _ => {},
                         }
                     }
-                    _ => { }
+                    _ => {},
                 }
             }
-            Err(error) => { }
+            Err(error) => {},
         }
     }
 
@@ -126,15 +126,26 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                     match random_number.gen_range(0, 2) {
                         0 => { // negation
                             let let_binding_string =
-                                let_binding_expr[0].to_string() + &("= ".to_string()) + &("-".to_string()) + let_binding_expr[1].trim();
+                                let_binding_expr[0].to_string() + &("= ".to_string()) + &("-(".to_string()) + let_binding_expr[1].trim().trim_end_matches(";") + &(");".to_string());
                             lines_vec[num_line - 1] = &let_binding_string;
                             // println!("{:?}", lines_vec[num_line - 1]);
                             return lines_vec.join("\r\n");
                         }
                         1 => { // arithmetic operator deletion
-
+                            let arithmetic_operators = vec!["+".to_string(), "-".to_string(), "*".to_string(), "/".to_string(), "%".to_string()];
+                            let mut arithmetic_indices = Vec::new();
+                            for (i, c) in lines_vec[num_line - 1].chars().enumerate() {
+                                if arithmetic_operators.contains(&&c.to_string()) {
+                                    arithmetic_indices.push(i);
+                                }
+                            }
+                            let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
+                            let tmp = lines_vec[num_line - 1][..(index as usize)].trim_end().to_string() + &(";".to_string());
+                            lines_vec[num_line - 1] = &tmp;
+                            // println!("{:?}", lines_vec[num_line - 1]);
+                            return lines_vec.join("\r\n");
                         }
-                        _ => {}
+                        _ => {},
                     }
                 }
                 syn::Stmt::Item(item) => {
@@ -158,7 +169,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             lines_vec[num_line - 1] = &const_string;
                             return lines_vec.join("\r\n");
                         }
-                        _ => { () },
+                        _ => {},
                     }
                 }
                 syn::Stmt::Expr(expr) => { () },
@@ -172,8 +183,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                     // println!("{:?}", void_functions);
                                     // println!("Wow~~~");
                                     if void_functions.contains(&exprPath.path.segments[0].ident.to_string()) {
+                                        let leading_spaces = line_to_parse.len() - line_to_parse.trim_start().len();
                                         // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
-                                        let void_method_call_mutator = " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start();
+                                        let void_method_call_mutator = " ".repeat(leading_spaces) + &("// ".to_string()) + line_to_parse.trim_start();
                                         lines_vec[num_line - 1] = &void_method_call_mutator;
                                         // lines_vec[num_line - 1] = &
                                         // println!("{:?}", exprPath.path.segments[0].ident.to_string());
@@ -184,10 +196,41 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 _ => {},
                             }
                         },
-                        _ => { () },
+                        syn::Expr::Return(exprReturn) => {
+                            // println!{"reached!"};
+                            let mut return_expr = line_to_parse.trim_start().trim_start_matches("return ").trim_end_matches(";");
+                            let leading_spaces = line_to_parse.len() - line_to_parse.trim_start().len();
+                            let mut random_number = rand::thread_rng();
+                            // println!("Integer: {}", random_number.gen_range(0, 2));
+                            match random_number.gen_range(0, 2) {
+                                0 => { // negation
+                                    let return_string = 
+                                        " ".repeat(leading_spaces) + &("return ".to_string()) + &("-(".to_string()) + return_expr + &(");".to_string());
+                                    lines_vec[num_line - 1] = &return_string;
+                                    // println!("{:?}", lines_vec[num_line - 1]);
+                                    return lines_vec.join("\r\n");
+                                }
+                                1 => { // arithmetic operator deletion
+                                    let arithmetic_operators = vec!["+".to_string(), "-".to_string(), "*".to_string(), "/".to_string(), "%".to_string()];
+                                    let mut arithmetic_indices = Vec::new();
+                                    for (i, c) in lines_vec[num_line - 1].chars().enumerate() {
+                                        if arithmetic_operators.contains(&&c.to_string()) {
+                                            arithmetic_indices.push(i);
+                                        }
+                                    }
+                                    let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
+                                    let tmp = lines_vec[num_line - 1][..(index as usize)].trim_end().to_string() + &(";".to_string());
+                                    lines_vec[num_line - 1] = &tmp;
+                                    println!("{:?}", lines_vec[num_line - 1]);
+                                    return lines_vec.join("\r\n");
+                                }
+                                _ => {},
+                            }
+                        },
+                        _ => {},
                     }
                 },
-                _ => { () },
+                _ => {},
             }
         }
         Err(error) => {
@@ -228,8 +271,6 @@ impl<'ast> VisitMut for BinOpVisitor {
                         type_str.push(format!("{},{}",_j,_i));
                     }
                 }
-                
-
                 let node_pos= Pos {
                     start_line : start.line,
                     start_column: start.column,

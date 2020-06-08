@@ -9,7 +9,7 @@ fn main() {
     let b = 2;
     let c = a + b;
     let d = c % 10;
-    let e = 2 * a - b + 1;
+    let e = 2 * a - b + 1 + c / b % 5;
 
     println!("{} {} {}", a, b, c);
 }
