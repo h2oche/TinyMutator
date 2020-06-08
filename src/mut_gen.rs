@@ -87,7 +87,6 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 if const_expr.len() > 1 {
                                     constants.push(const_expr[1].trim_end_matches(";").trim());
                                 }
-
                             },
                             syn::Item::Fn(itemFn) => { // get functions whose return type is not specified
                                 // println!("\n\n\n{:?}", itemFn);
@@ -450,7 +449,6 @@ pub struct MutantInfo {
     pub target_line: usize,
     pub mutation: String,
 }
-
 
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file).expect("Something went wrong reading the file");
