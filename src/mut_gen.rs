@@ -142,7 +142,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 }
                             }
                             if arithmetic_indices.len() == 0 {
-                                return lines_vec.join("\r\n");
+                                return String::from("notmutated:")+&lines_vec.join("\r\n");
                             }
                             let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
                             let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)].trim_end().to_string() + &(";".to_string());
@@ -234,7 +234,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                         }
                                     }
                                     if arithmetic_indices.len() == 0 {
-                                        return lines_vec.join("\r\n");
+                                        return String::from("notmutated:")+&lines_vec.join("\r\n");
                                     }
                                     let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
                                     let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)].trim_end().to_string() + &(";".to_string());

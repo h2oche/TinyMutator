@@ -1,11 +1,8 @@
 fn get_fitness_function(x: i32, y: i32) -> i32 {
     println!{"{}", x + y};
 
-    let a
-        = x + 1;
-
-    return
-        x + y / y - 2 * 3;
+    let a = x + 1;
+    return x + y / y - 2 * 3;
 
 }
 
