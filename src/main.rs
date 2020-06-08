@@ -5,6 +5,7 @@ mod utils;
 use std::env;
 use std::fs;
 use syn::Result;
+use mut_gen::MutantInfo;
 
 fn print_ast_from_file() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -32,8 +33,14 @@ fn main() {
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
     // mut_gen::mutate_file_by_line3(args[1].clone(), 10);
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 11));
-    println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
-    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 12));
+    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
+    
+    // println!("{:#?}", mut_gen::mutate_file_by_line(args[1].clone(), 26));
+    let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), 26);
+    for _x in mutated_result.iter() {
+        println!("{} {} {}",_x.file_name, _x.target_line, _x.mutation);
+    }
+
     let test_list = vec![String::from("combinations_no_collect")];
     // mut_test::run_mut_test(args[1].clone(), Some(test_list));
 }  
