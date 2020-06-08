@@ -113,7 +113,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
     // println!("\n\n\n{:?}\n\n\n", line_to_parse);
     // println!("{:?}", expr_to_mutate);
-    println!{"{} {}", start, end};
+    // println!{"{} {}", start, end};
     match expr_to_mutate {
         Ok(stmt) => {
             // println!("{:#?}", stmt);
@@ -283,10 +283,7 @@ impl<'ast> VisitMut for BinOpVisitor {
         let end = node.span().end();
         if self.search {
             if start.line <= self.struct_line && self.struct_line <= end.line && node.arms.len() > 0 {
-
-                // let type_str = vec![06];
                 let ll = node.arms.len();
-                // let type_str : Vec<String> = (0..ll).map(|x| x.to_string()).collect();
                 let mut type_str = Vec::new();
                 for _i in 0..ll {
                     for _j in 0.._i {
@@ -316,8 +313,7 @@ impl<'ast> VisitMut for BinOpVisitor {
             end.line == self.target.end_line &&
             end.column == self.target.end_column &&
             self.target.start_type.len() > 0  {
-                let _op = self.target.start_type.pop().unwrap();//.parse::<usize>().unwrap();
-                // node.arms[_op].pat = syn::parse_str::<Pat>("_").unwrap();   
+                let _op = self.target.start_type.pop().unwrap();
                 let tokens: Vec<&str> = _op.split(",").collect();
                 let _x = tokens[0].parse::<usize>().unwrap();
                 let _y = tokens[1].parse::<usize>().unwrap();
@@ -406,42 +402,6 @@ impl<'ast> VisitMut for BinOpVisitor {
             }
         }
     }
-
-    fn visit_expr_binary_mut(&mut self, node: &mut syn::ExprBinary) {
-        
-        let start = node.span().start();
-        let end = node.span().end();
-        if self.search {
-            if start.line <= self.struct_line && self.struct_line <= end.line {
-                let type_str = vec![String::from("l"), String::from("r")];
-
-                let node_pos= Pos {
-                    start_line : start.line,
-                    start_column: start.column,
-                    end_line : end.line,
-                    end_column: end.column,
-                    start_type: type_str,
-                    mut_type: String::from("expr_binary"),
-                };
-                self.vec_pos.push(node_pos);    
-            }
-            
-            visit_mut::visit_expr_binary_mut(self, node);
-        } else {
-            if start.line == self.target.start_line &&
-            start.column == self.target.start_column &&
-            end.line == self.target.end_line &&
-            end.column == self.target.end_column &&
-            self.target.start_type.len() > 0  {
-                let _op = self.target.start_type.pop().unwrap();
-                match _op.as_str() {
-                    "l" => {*(node.left) = syn::parse_str::<Expr>("1").unwrap(); node.op = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
-                    "r" => {*(node.right) = syn::parse_str::<Expr>("1").unwrap(); node.op = syn::BinOp::Mul(syn::token::Star(node.span().clone()));},
-                    _ => {},
-                }               
-            }
-        }
-    }
 }
 
 pub struct MutantInfo {
@@ -452,8 +412,6 @@ pub struct MutantInfo {
 
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
-    
-    // println!("{:#?} << ",syn::parse_str::<Pat>("_").unwrap());
     let mut ret = Vec::new();
 
     let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: num_line, struct_column: 0, search: true, target:  Pos {
@@ -465,16 +423,13 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         mut_type : String::from(""),
     }};
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    // println!("{:#?}", syntax_tree.items[3]);
     
     _binopvisitor.visit_file_mut(&mut syntax_tree);
     _binopvisitor.search = false;
     let mut idx = 0;
-    // println!("{}", _binopvisitor.vec_pos.len());
     for _n in 0.._binopvisitor.vec_pos.len() {
-        let mut pos = &_binopvisitor.vec_pos[_n];
+        let pos = &_binopvisitor.vec_pos[_n];
         let _muttype = pos.mut_type.clone();
-        // println!("{} {} {} {} {} {}", pos.start_line, pos.start_column, pos.end_line, pos.end_column, pos.mut_type, pos.start_type.len());
         _binopvisitor.target = Pos {
             start_line: pos.start_line, 
             start_column : pos.start_column,
@@ -503,7 +458,6 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
     let woo = idx;
     for _n in 0..20 {
         let mutated_result1 : String = mutate_file_by_line(file.clone(), num_line.clone()).clone();
-        // .splitn(2,":").collect();
         let mutated_result : Vec<&str> = mutated_result1.splitn(2,":").collect();
 
         let mutated_file = mutated_result[1].clone();
@@ -517,12 +471,9 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
                     .arg(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
-            
-            
+              
         ret.push(MutantInfo{file_name : format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
         idx += 1;
-
-
     }
     println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
     
