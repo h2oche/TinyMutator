@@ -246,6 +246,7 @@ struct Pos {
     end_line: usize,
     end_column: usize,
     start_type: Vec<String>,
+    mut_type: String,
 }
 
 struct BinOpVisitor {
@@ -262,6 +263,7 @@ impl<'ast> VisitMut for BinOpVisitor {
         let end = node.span().end();
         if self.search {
             if start.line <= self.struct_line && self.struct_line <= end.line && node.arms.len() > 0 {
+
                 // let type_str = vec![06];
                 let ll = node.arms.len();
                 // let type_str : Vec<String> = (0..ll).map(|x| x.to_string()).collect();
@@ -277,8 +279,16 @@ impl<'ast> VisitMut for BinOpVisitor {
                     end_line : end.line,
                     end_column: end.column,
                     start_type: type_str,
+                    mut_type: String::from("match"),
                 };
                 self.vec_pos.push(node_pos);    
+            }
+            for a in &mut node.attrs {
+                self.visit_attribute_mut(a);
+            }
+            self.visit_expr_mut(&mut *node.expr);
+            for a in &mut node.arms {
+                self.visit_arm_mut(a);
             }
         } else {
             if start.line == self.target.start_line &&
@@ -307,27 +317,29 @@ impl<'ast> VisitMut for BinOpVisitor {
         let end = node.span().end();
         if self.search {
             if start.line <= self.struct_line && self.struct_line <= end.line {
+                
                 let mut arith = vec![String::from("+"), String::from("-"), String::from("*"), String::from("/"), String::from("%")];
                 let mut bit = vec![String::from("^"), String::from("&"), String::from("|")];
                 let mut relational = vec![String::from("=="), String::from("<"), String::from("<="), String::from("!=") ,String::from(">="), String::from(">")];
+                let mut _muttype = String::from("");
                 let type_str = match node {
                     // Arithmetic Operators
-                    syn::BinOp::Add(_add) => {arith.remove(0); arith},
-                    syn::BinOp::Sub(_sub) => {arith.remove(1); arith},
-                    syn::BinOp::Mul(_star) => {arith.remove(2); arith},
-                    syn::BinOp::Div(_div) => {arith.remove(3); arith},
-                    syn::BinOp::Rem(_rem) => {arith.remove(4); arith},
+                    syn::BinOp::Add(_add) => {_muttype = String::from("arithmetic"); arith.remove(0); arith},
+                    syn::BinOp::Sub(_sub) => {_muttype = String::from("arithmetic"); arith.remove(1); arith},
+                    syn::BinOp::Mul(_star) => {_muttype = String::from("arithmetic"); arith.remove(2); arith},
+                    syn::BinOp::Div(_div) => {_muttype = String::from("arithmetic"); arith.remove(3); arith},
+                    syn::BinOp::Rem(_rem) => {_muttype = String::from("arithmetic"); arith.remove(4); arith},
                     // Bitwise Operators
-                    syn::BinOp::BitXor(_caret) => {bit.remove(0); bit},
-                    syn::BinOp::BitAnd(_and) => {bit.remove(1); bit},
-                    syn::BinOp::BitOr(_or) => {bit.remove(2); bit},
+                    syn::BinOp::BitXor(_caret) => {_muttype = String::from("bitwise"); bit.remove(0); bit},
+                    syn::BinOp::BitAnd(_and) => {_muttype = String::from("bitwise"); bit.remove(1); bit},
+                    syn::BinOp::BitOr(_or) => {_muttype = String::from("bitwise"); bit.remove(2); bit},
                     // Relational Operators
-                    syn::BinOp::Eq(_eqeq) => {relational.remove(0); relational},
-                    syn::BinOp::Lt(_lt) => {relational.remove(1); relational},
-                    syn::BinOp::Le(_le) => {relational.remove(2); relational},
-                    syn::BinOp::Ne(_ne) => {relational.remove(3); relational},
-                    syn::BinOp::Ge(_ge) => {relational.remove(4); relational},
-                    syn::BinOp::Gt(_gt) => {relational.remove(5); relational},
+                    syn::BinOp::Eq(_eqeq) => {_muttype = String::from("relational"); relational.remove(0); relational},
+                    syn::BinOp::Lt(_lt) => {_muttype = String::from("relational"); relational.remove(1); relational},
+                    syn::BinOp::Le(_le) => {_muttype = String::from("relational"); relational.remove(2); relational},
+                    syn::BinOp::Ne(_ne) => {_muttype = String::from("relational"); relational.remove(3); relational},
+                    syn::BinOp::Ge(_ge) => {_muttype = String::from("relational"); relational.remove(4); relational},
+                    syn::BinOp::Gt(_gt) => {_muttype = String::from("relational"); relational.remove(5); relational},
                     
                     _ => vec![String::from("+")],
                 };
@@ -337,6 +349,7 @@ impl<'ast> VisitMut for BinOpVisitor {
                     end_line : end.line,
                     end_column: end.column,
                     start_type: type_str,
+                    mut_type: _muttype,
                 };
                 self.vec_pos.push(node_pos);    
             }
@@ -375,6 +388,7 @@ impl<'ast> VisitMut for BinOpVisitor {
     }
 
     fn visit_expr_binary_mut(&mut self, node: &mut syn::ExprBinary) {
+        
         let start = node.span().start();
         let end = node.span().end();
         if self.search {
@@ -387,6 +401,7 @@ impl<'ast> VisitMut for BinOpVisitor {
                     end_line : end.line,
                     end_column: end.column,
                     start_type: type_str,
+                    mut_type: String::from("expr_binary"),
                 };
                 self.vec_pos.push(node_pos);    
             }
@@ -409,10 +424,18 @@ impl<'ast> VisitMut for BinOpVisitor {
     }
 }
 
-pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
+pub struct MutantInfo {
+    pub file_name: String,
+    pub target_line: usize,
+    pub mutation: String,
+}
+
+
+pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file).expect("Something went wrong reading the file");
     
     // println!("{:#?} << ",syn::parse_str::<Pat>("_").unwrap());
+    let mut ret = Vec::new();
 
     let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: num_line, struct_column: 0, search: true, target:  Pos {
         start_line : 0,
@@ -420,22 +443,26 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
         end_line : 0,
         end_column: 0,
         start_type: vec![String::from("+")],
+        mut_type : String::from(""),
     }};
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    println!("{:#?}",syntax_tree.items[3]);
+    // println!("{:#?}", syntax_tree.items[3]);
     
     _binopvisitor.visit_file_mut(&mut syntax_tree);
     _binopvisitor.search = false;
     let mut idx = 0;
+    // println!("{}", _binopvisitor.vec_pos.len());
     for _n in 0.._binopvisitor.vec_pos.len() {
-        let pos = &_binopvisitor.vec_pos[_n];
-        // println!("{} {} {} {} {}", pos.start_line, pos.start_column, pos.end_line, pos.end_column, pos.start_type);
+        let mut pos = &_binopvisitor.vec_pos[_n];
+        let _muttype = pos.mut_type.clone();
+        // println!("{} {} {} {} {} {}", pos.start_line, pos.start_column, pos.end_line, pos.end_column, pos.mut_type, pos.start_type.len());
         _binopvisitor.target = Pos {
             start_line: pos.start_line, 
             start_column : pos.start_column,
             end_line : pos.end_line,
             end_column : pos.end_column, 
             start_type : pos.start_type.clone(),
+            mut_type : _muttype.clone(),
         };
         for _m in 0..pos.start_type.len() {
             let mut new_syntax_tree = syn::parse_file(&example_source).unwrap();
@@ -448,9 +475,12 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> String {
                     .arg(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
+            
+            
+            ret.push(MutantInfo{file_name : format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
             idx += 1;
         }
         
     }
-    return "hello".to_string(); // temporary return value
+    return ret;
 }
