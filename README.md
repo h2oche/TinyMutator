@@ -25,3 +25,9 @@
     cd TARGET_PROJECT
     cargo tarpaulin --out Json --output-dir TARGET_PATH
     ```
+  
+  - Download rustfmt
+
+    ```
+    rustup component add rustfmt
+    ```
