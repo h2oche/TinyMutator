@@ -142,6 +142,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                     arithmetic_indices.push(i);
                                 }
                             }
+                            if arithmetic_indices.len() == 0 {
+                                return lines_vec.join("\r\n");
+                            }
                             let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
                             let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)].trim_end().to_string() + &(";".to_string());
                             for i in start..end {
@@ -230,6 +233,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                         if arithmetic_operators.contains(&&c.to_string()) {
                                             arithmetic_indices.push(i);
                                         }
+                                    }
+                                    if arithmetic_indices.len() == 0 {
+                                        return lines_vec.join("\r\n");
                                     }
                                     let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
                                     let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)].trim_end().to_string() + &(";".to_string());
