@@ -29,5 +29,7 @@ fn main() {
 
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
-    mut_gen::mutate_file_by_line3(args[1].clone(), 10);
+    // mut_gen::mutate_file_by_line3(args[1].clone(), 10);
+    println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 11));
+    println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 12));
 }

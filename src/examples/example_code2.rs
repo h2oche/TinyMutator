@@ -1,15 +1,13 @@
-const THRESTHOLD: i32 = 1;
-const LIFE: i32 = 3;
-
-fn main() {
-    const Time: f32 = 3.0;
-    let a = 1;
-    let b = 2;
-    let c = 2 * a - b + 1;
-
-    println!("{} {} {}", a, b, c);
+fn get_fitness_function(x: i32, y: i32) -> i32 {
+    println!{"{}", x + y};
+    x + y
 }
 
-fn get(x: i32) -> i32 {
-    1
+fn get_fitness_function2(x: i32, y: i32) {
+    println!("{}", x + y);
+}
+
+fn main() {
+    get_fitness_function(1, 2);
+    get_fitness_function2(1, 2);
 }

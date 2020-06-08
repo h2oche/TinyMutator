@@ -12,6 +12,7 @@ use std::{
     process::Command,
     cmp,
     vec,
+    num::Wrapping,
 };
 use syn::{
     spanned::Spanned,
@@ -24,12 +25,16 @@ use syn::{
  * Get smallest list of lines which is parsable with ast
 */
 pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (usize, usize) {
-    for j in 1..cmp::max(splitted_file.len() - num_line, num_line - 0) { // length
+    // println!("num line : {w}", num_line);
+    if num_line >= splitted_file.len() {
+        return (0, splitted_file.len());
+    }
+    for j in 1..cmp::max(splitted_file.len() - num_line + 1, num_line + 1) { // length
         for i in 0..j {
-            if num_line + i - j <= 0 || num_line + i > splitted_file.len() { continue; }
-            // println!("{:#?}", &splitted_file[(num_line + i - j)..(num_line + i)].join("\t\r"));
+            if (num_line as i32) + (i as i32) - (j as i32) < 0 || (num_line as i32) + (i as i32) > (splitted_file.len() as i32) { continue; }
             // println!("{} {}", num_line + i - j, num_line + i);
-            match :: syn::parse_str::<Stmt>(&splitted_file[(num_line + i - j)..(num_line + i)].join("\t\r")) {
+            // println!("\n\n\n\n\n{:?}\n\n\n\n\n", &splitted_file[(num_line + i - j)..(num_line + i)].join("\r\n"));
+            match syn::parse_str::<Stmt>(&(splitted_file[(num_line + i - j)..(num_line + i)].join("\r\n"))) {
                 Ok(stmt) => {
                     return (num_line + i - j, num_line + i);
                 },
@@ -47,58 +52,69 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     // println!("filename : {}", file);
     // println!("line : {}", num_line);
     let mut constants = vec!["0", "1", "-1"];
+    let mut void_functions: Vec<String> = Vec::new();
 
-    let args: Vec<String> = env::args().collect();
-    let file = &args[1];
-    let content = fs::read_to_string(file).expect("Something went wrong reading the file");
+    let example_source = fs::read_to_string(file).expect("Something went wrong reading the file");
+    let ast = syn::parse_file(&example_source);
+    let lines = example_source.split("\r\n");
+    let mut lines_vec: Vec<_> = example_source.split("\r\n").collect();
 
-    // println!("{:#?}", content);
-    let ast = syn::parse_file(&content);
+    // println!("{:?}", example_source);
 
-    let lines = content.split("\r\n");
-    for line in lines {
+    // preprocess(find all constants and functions in file, ...)
+    for i in 0..lines_vec.len() {
+        // let expr = syn::parse_str::<Stmt>(&lines_vec[i]);
+        // println!("{:?}", expr);
         // println!("{:#?}", line);
-        let mut expr = syn::parse_str::<Stmt>(line);
+        let (start, end) = find_min_parsable_lines(lines_vec.clone(), i + 1);
+        let line_to_parse = lines_vec[start..end].join("\r\n");
+        let expr = syn::parse_str::<Stmt>(&line_to_parse);
+        // println!("\n\n\n{}, {}", start, end);
+        // println!("{:?}", line_to_parse);
+        // println!("{:?}", expr);
+        // println!("{}\n\n\n", i);
         match expr {
             // statements are divided into 4 types(https://docs.rs/syn/1.0.30/syn/enum.Stmt.html)
             Ok(stmt) => {
                 match stmt {
-                    syn::Stmt::Local(local) => { // local let binding
-                        // println!(" > {:#?}", &local);
-                        // utils::print_type_of(&local.init);
-                    }
                     syn::Stmt::Item(item) => {
                         // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
                         match item {
                             syn::Item::Const(itemConst) => {
                                 // println!("{}", line);
                                 // println!("{:#?}", &itemConst);
-                                let mut const_expr: Vec<_> = line.split("=").collect();
-                                constants.push(const_expr[1].trim_end_matches(";").trim());
-                            }
-                            _ => {}
+                                let mut const_expr: Vec<_> = lines_vec[i].split("=").collect();
+                                // println!("{:?}\n\n\n", const_expr);
+                                if const_expr.len() > 1 {
+                                    constants.push(const_expr[1].trim_end_matches(";").trim());
+                                }
+
+                            },
+                            syn::Item::Fn(itemFn) => { // get functions whose return type is not specified
+                                // println!("\n\n\n{:?}", itemFn);
+                                if itemFn.sig.output == syn::ReturnType::Default { // void return type
+                                    // println!("\n\n\n{:?}", itemFn.sig.ident.to_string());
+                                    void_functions.push(itemFn.sig.ident.to_string());
+                                }
+                            },
+                            _ => {},
                         }
                     }
-                    syn::Stmt::Expr(expr) => {
-                        // println!("{:#?}", expr);
-                    }
-                    syn::Stmt::Semi(expr, semi) => {
-                        // println!("not a case");
-                    }
+                    _ => { }
                 }
             }
-            Err(error) => {
-                // syntax error of target file
-                // println!("{}", error);
-            }
+            Err(error) => { }
         }
     }
 
-    let mut lines_vec: Vec<_> = content.split("\r\n").collect();
+    // println!("{:?}", constants);
+    // println!("{:?}", void_functions);
+
     let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
-    let line_to_parse = lines_vec[start..end].join("\t\n");
+    let line_to_parse = lines_vec[start..end].join("\r\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
-    println!("{:?}", line_to_parse);
+    // println!("\n\n\n{:?}\n\n\n", line_to_parse);
+    // println!("{:?}", expr_to_mutate);
     match expr_to_mutate {
         Ok(stmt) => {
             // println!("{:#?}", stmt);
@@ -113,8 +129,8 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             let let_binding_string =
                                 let_binding_expr[0].to_string() + &("= ".to_string()) + &("-".to_string()) + let_binding_expr[1].trim();
                             lines_vec[num_line - 1] = &let_binding_string;
-                            println!("{:?}", lines_vec[num_line - 1]);
-                            return lines_vec.join("\t\r");
+                            // println!("{:?}", lines_vec[num_line - 1]);
+                            return lines_vec.join("\r\n");
                         }
                         1 => { // arithmetic operator deletion
 
@@ -141,13 +157,37 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             let const_string =
                                 tmp + &("= ".to_string()) + new_constant + &(";".to_string());
                             lines_vec[num_line - 1] = &const_string;
-                            return lines_vec.join("\t\r");
+                            return lines_vec.join("\r\n");
                         }
                         _ => { () },
                     }
                 }
                 syn::Stmt::Expr(expr) => { () },
-                syn::Stmt::Semi(expr, semi) => { () },
+                syn::Stmt::Semi(expr, semi) => { 
+                    match expr {
+                        syn::Expr::Call(exprCall) => {
+                            // println!("{:?}", *(exprCall.func));
+                            match *(exprCall.func) {
+                                syn::Expr::Path(exprPath) => {
+                                    // println!("Wow~~~");
+                                    // println!("{:?}", void_functions);
+                                    // println!("Wow~~~");
+                                    if void_functions.contains(&exprPath.path.segments[0].ident.to_string()) {
+                                        // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
+                                        let void_method_call_mutator = " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start();
+                                        lines_vec[num_line - 1] = &void_method_call_mutator;
+                                        // lines_vec[num_line - 1] = &
+                                        // println!("{:?}", exprPath.path.segments[0].ident.to_string());
+                                        // println!("Wow~~~");
+                                        return lines_vec.join("\r\n");
+                                    }
+                                },
+                                _ => {},
+                            }
+                        },
+                        _ => { () },
+                    }
+                },
                 _ => { () },
             }
         }
