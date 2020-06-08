@@ -112,8 +112,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
     let line_to_parse = lines_vec[start..end].join("\r\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
-    // println!("\n\n\n{:?}\n\n\n", line_to_parse);
-    // println!("{:?}", expr_to_mutate);
+    println!("\n\n\n{:?}\n\n\n", line_to_parse);
+    println!("{:?}", expr_to_mutate);
+    // println!{"{} {}", start, end};
     match expr_to_mutate {
         Ok(stmt) => {
             // println!("{:#?}", stmt);
@@ -127,22 +128,26 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                         0 => { // negation
                             let let_binding_string =
                                 let_binding_expr[0].to_string() + &("= ".to_string()) + &("-(".to_string()) + let_binding_expr[1].trim().trim_end_matches(";") + &(");".to_string());
-                            lines_vec[num_line - 1] = &let_binding_string;
-                            // println!("{:?}", lines_vec[num_line - 1]);
+                            for i in start..end {
+                                lines_vec.remove(start);
+                            }
+                            lines_vec[start] = &let_binding_string;
                             return lines_vec.join("\r\n");
                         }
                         1 => { // arithmetic operator deletion
                             let arithmetic_operators = vec!["+".to_string(), "-".to_string(), "*".to_string(), "/".to_string(), "%".to_string()];
                             let mut arithmetic_indices = Vec::new();
-                            for (i, c) in lines_vec[num_line - 1].chars().enumerate() {
+                            for (i, c) in lines_vec[start..end].join("\r\n").chars().enumerate() {
                                 if arithmetic_operators.contains(&&c.to_string()) {
                                     arithmetic_indices.push(i);
                                 }
                             }
                             let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
-                            let tmp = lines_vec[num_line - 1][..(index as usize)].trim_end().to_string() + &(";".to_string());
-                            lines_vec[num_line - 1] = &tmp;
-                            // println!("{:?}", lines_vec[num_line - 1]);
+                            let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)].trim_end().to_string() + &(";".to_string());
+                            for i in start..end {
+                                lines_vec.remove(start);
+                            }
+                            lines_vec[start] = &tmp;
                             return lines_vec.join("\r\n");
                         }
                         _ => {},
@@ -166,7 +171,10 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                             let tmp = const_expr[0].to_string();
                             let const_string =
                                 tmp + &("= ".to_string()) + new_constant + &(";".to_string());
-                            lines_vec[num_line - 1] = &const_string;
+                            for i in start..end {
+                                lines_vec.remove(start);
+                            }
+                            lines_vec[start] = &const_string;
                             return lines_vec.join("\r\n");
                         }
                         _ => {},
@@ -185,11 +193,11 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                     if void_functions.contains(&exprPath.path.segments[0].ident.to_string()) {
                                         let leading_spaces = line_to_parse.len() - line_to_parse.trim_start().len();
                                         // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
-                                        let void_method_call_mutator = " ".repeat(leading_spaces) + &("// ".to_string()) + line_to_parse.trim_start();
-                                        lines_vec[num_line - 1] = &void_method_call_mutator;
-                                        // lines_vec[num_line - 1] = &
-                                        // println!("{:?}", exprPath.path.segments[0].ident.to_string());
-                                        // println!("Wow~~~");
+                                        let void_method_call_string = " ".repeat(leading_spaces) + &("// ".to_string()) + line_to_parse.trim_start();
+                                        for i in start..end {
+                                            lines_vec.remove(start);
+                                        }
+                                        lines_vec[start] = &void_method_call_string;
                                         return lines_vec.join("\r\n");
                                     }
                                 },
@@ -198,7 +206,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                         },
                         syn::Expr::Return(exprReturn) => {
                             // println!{"reached!"};
-                            let mut return_expr = line_to_parse.trim_start().trim_start_matches("return ").trim_end_matches(";");
+                            let mut return_expr = line_to_parse.trim_start().trim_start_matches("return").trim().trim_end_matches(";");
+                            // println!("return expression : {:?}", line_to_parse.trim_start());
+                            // println!("return expression : {:?}", return_expr);
                             let leading_spaces = line_to_parse.len() - line_to_parse.trim_start().len();
                             let mut random_number = rand::thread_rng();
                             // println!("Integer: {}", random_number.gen_range(0, 2));
@@ -206,22 +216,27 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 0 => { // negation
                                     let return_string = 
                                         " ".repeat(leading_spaces) + &("return ".to_string()) + &("-(".to_string()) + return_expr + &(");".to_string());
-                                    lines_vec[num_line - 1] = &return_string;
-                                    // println!("{:?}", lines_vec[num_line - 1]);
+                                    // println!("{:?}", return_string);
+                                    for i in start..end {
+                                        lines_vec.remove(start);
+                                    }
+                                    lines_vec[start] = &return_string;
                                     return lines_vec.join("\r\n");
                                 }
                                 1 => { // arithmetic operator deletion
                                     let arithmetic_operators = vec!["+".to_string(), "-".to_string(), "*".to_string(), "/".to_string(), "%".to_string()];
                                     let mut arithmetic_indices = Vec::new();
-                                    for (i, c) in lines_vec[num_line - 1].chars().enumerate() {
+                                    for (i, c) in lines_vec[start..end].join("\r\n").chars().enumerate() {
                                         if arithmetic_operators.contains(&&c.to_string()) {
                                             arithmetic_indices.push(i);
                                         }
                                     }
                                     let index = *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
-                                    let tmp = lines_vec[num_line - 1][..(index as usize)].trim_end().to_string() + &(";".to_string());
-                                    lines_vec[num_line - 1] = &tmp;
-                                    println!("{:?}", lines_vec[num_line - 1]);
+                                    let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)].trim_end().to_string() + &(";".to_string());
+                                    for i in start..end {
+                                        lines_vec.remove(start);
+                                    }
+                                    lines_vec[start] = &tmp;
                                     return lines_vec.join("\r\n");
                                 }
                                 _ => {},
@@ -237,7 +252,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
             // println!("{}", error);
         }
     }
-    return "hello".to_string(); // temporary return value
+    return lines_vec.join("\r\n"); // temporary return value
 }
 
 struct Pos {
@@ -480,7 +495,6 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
             ret.push(MutantInfo{file_name : format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
             idx += 1;
         }
-        
     }
     return ret;
 }

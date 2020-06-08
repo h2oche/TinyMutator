@@ -41,6 +41,7 @@ fn main() {
         println!("{} {} {}",_x.file_name, _x.target_line, _x.mutation);
     }
 
+    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
     let test_list = vec![String::from("combinations_no_collect")];
     // mut_test::run_mut_test(args[1].clone(), Some(test_list));
 }  
