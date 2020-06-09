@@ -279,66 +279,6 @@ struct BinOpVisitor {
 }
 use std::rc::Rc;
 impl<'ast> VisitMut for BinOpVisitor {
-    fn visit_expr_return_mut(&mut self, node: &mut syn::ExprReturn) {
-        let start = node.span().start();
-        let end = node.span().end();
-        if self.search {
-            if start.line <= self.struct_line && self.struct_line <= end.line {
-                // let ll = node.arms.len();
-                // let mut type_str = Vec::new();
-                let a = true;
-                // for _i in 0..ll {
-                //     for _j in 0.._i {
-                //         type_str.push(format!("{},{}",_j,_i));
-                //     }
-                // }
-                // let node_pos= Pos {
-                //     start_line : start.line,
-                //     start_column: start.column,
-                //     end_line : end.line,
-                //     end_column: end.column,
-                //     start_type: type_str,
-                //     mut_type: String::from("return"),
-                // };
-                // self.vec_pos.push(node_pos);    
-            }
-            // println!("Here");
-            for a in &mut node.attrs {
-                self.visit_attribute_mut(a);
-            }
-            
-            if let Some(ref mut x) = node.expr {
-                
-                self.visit_expr_mut(&mut *x);
-            }
-            
-        } else {
-            for a in &mut node.attrs {
-                self.visit_attribute_mut(a);
-            }
-            
-            if let Some(ref mut x) = node.expr {
-                
-                self.visit_expr_mut(&mut *x);
-            }
-            /*
-            if start.line == self.target.start_line &&
-            start.column == self.target.start_column &&
-            end.line == self.target.end_line &&
-            end.column == self.target.end_column &&
-            self.target.start_type.len() > 0  {
-                let _op = self.target.start_type.pop().unwrap();
-                let tokens: Vec<&str> = _op.split(",").collect();
-                let _x = tokens[0].parse::<usize>().unwrap();
-                let _y = tokens[1].parse::<usize>().unwrap();
-
-                let temp = node.arms[_x].pat.clone();
-                node.arms[_x].pat = node.arms[_y].pat.clone();
-                node.arms[_y].pat = temp;
-                
-            }*/
-        }   
-    }
 
     fn visit_expr_match_mut(&mut self, node: &mut syn::ExprMatch) {
         let start = node.span().start();
@@ -486,6 +426,7 @@ pub fn mutate(file: String, num_line: usize) -> Vec<MutantInfo> {
         mut_type : String::from(""),
     }};
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
+    println!("{:#?}", syntax_tree);
     
     _binopvisitor.visit_file_mut(&mut syntax_tree);
     _binopvisitor.search = false;
