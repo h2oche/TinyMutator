@@ -12,12 +12,13 @@ use std::{
     process::Command,
     cmp,
     vec,
-    num::Wrapping,
 };
 use syn::{
     spanned::Spanned,
     visit_mut::{self, VisitMut},
-     Expr,  Stmt,  Pat,
+    Expr,
+    Stmt,
+    Pat,
 };
 
 /**
