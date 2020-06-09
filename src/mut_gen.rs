@@ -523,14 +523,22 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         }
     }
     let woo = idx;
+
+    let mut mutants_by_string: Vec<String> = Vec::new();
     for _n in 0..20 {
-        let mutated_result1 : String = mutate_file_by_line(file.clone(), num_line.clone()).clone();
-        let mutated_result : Vec<&str> = mutated_result1.splitn(2,":").collect();
+        let mutated_result1: String = mutate_file_by_line(file.clone(), num_line.clone()).clone();
+        let mutated_result: Vec<&str> = mutated_result1.splitn(2,":").collect();
 
         let mutated_file = mutated_result[1].clone();
         let _muttype = mutated_result[0].to_string().clone();
-        if _muttype == "notmutated" {
-            continue;
+
+        if _muttype == "notmutated" { continue; } // not mutated
+        match mutants_by_string.iter().position(|r| r == mutated_file) {
+            Some(index) => { continue; } // already existing mutant
+            None => { 
+                // println!("New mutant!");
+                mutants_by_string.push(mutated_file.to_string());
+            }
         }
         let mut fz = fs::File::create(format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs")).unwrap();
         fz.write_all(mutated_file.as_bytes());
@@ -542,6 +550,7 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         ret.push(MutantInfo{source_name : using.to_string().clone(), file_name : format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
         idx += 1;
     }
+    // println!("{:?}", mutants_by_string);
     println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
     return ret;
 }

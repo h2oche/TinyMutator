@@ -43,5 +43,6 @@ fn main() {
 
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
     let test_list = vec![String::from("combinations_no_collect")];
-    mut_test::run_mut_test(&args[1], Some(test_list));
+    println!{"{:?}", test_list};
+    // mut_test::run_mut_test(&args[1], Some(test_list));
 }  
