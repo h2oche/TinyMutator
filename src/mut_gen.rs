@@ -513,7 +513,7 @@ pub fn mutate(file: String, num_line: usize) -> Vec<MutantInfo> {
 
             // Format mutated source code.
             Command::new("rustfmt")
-                    .arg(format!("{}{}{}{}{}",using.to_string().clone(),num_line,"_",idx,".rs"))
+                    .arg(format!("{}{}{}{}{}{}",using.to_string().clone(),"_",num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
             
