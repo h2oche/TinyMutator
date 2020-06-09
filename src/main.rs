@@ -24,23 +24,32 @@ fn main() {
     if args.len() < 2 {
         panic!("No Specified Project Directory");
     }
-    // let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
+    let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
 
-    // let trace_info = cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
-    // println!("{:?}", trace_info);
+    let trace_info = cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
+    let mut mutated_result: Vec<MutantInfo> = Vec::new();
+    let trace_iter = trace_info.iter();
+    let mut counter = 0;
+    for trace in trace_iter {
+        let path = &trace.path;
+        let line_list = &trace.traces;
+        let line_iter = line_list.iter();
+        for line in line_iter{
+            println!("Generating Mutants for {}, {}", path, *line);
+            mutated_result.append(&mut mut_gen::mutate(path.clone(), *line));
+            counter += 1;
+            if counter > 20{
+                break;
+            }
+        }
+        if counter > 20{
+            break;
+        }
+    }
 
-    // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
-    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
-    // mut_gen::mutate(args[1].clone(), 10);
-    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 11));
-    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
-    
-    // println!("{:#?}", mut_gen::mutate_file_by_line(args[1].clone(), 26));
-    let mutated_result = mut_gen::mutate(args[1].clone(), 6);
-
-    // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
     let result = mut_test::mut_test(args[1].clone(), mutated_result);
     for _x in result.iter() {
         println!("{}, {}", _x.1, _x.0);
     }
+    
 }  

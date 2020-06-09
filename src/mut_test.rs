@@ -3,7 +3,7 @@ use super::utils;
 use super::mut_gen::MutantInfo;
 use std::process::Command;
 use std::str;
-use std::fs::{File, OpenOptions};
+use std::fs::{remove_file, OpenOptions};
 use std::io::prelude::*;
 use std::fmt;
 
@@ -33,6 +33,7 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(String, 
         return result;
     }
     let mutants_iter = list_of_mutants.iter();
+    println!("Generating Original Testing Data");
     let original_test_result = run_mut_test(&path, None).unwrap();
     /*let original_test_result2 = run_mut_test(&path, None).unwrap();
     if check_survive(&original_test_result2, &original_test_result){
@@ -41,6 +42,7 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(String, 
         println!("killed");
     }
     return result;*/
+    
     for mutant in mutants_iter {
         let original_source_code = replace_source(&path, mutant);
         let mut_test_result = match run_mut_test(&path, None) {
@@ -67,11 +69,12 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(String, 
  */
 fn replace_source(path: &String, mutate: &MutantInfo) -> (String, String) {
     let file_name : &String = &mutate.file_name;
-    let file_name : String = String::new() + &utils::get_cwd() + "/" + file_name;
-    let original_file_name = &mutate.source_name;
+    let original_file_name = String::new() + &mutate.source_name + ".rs";
+    println!("\nTesting : {}", file_name);
+    println!("Original_file_name : {}", original_file_name);
 
     // Read original source code and save it.
-    let mut f = OpenOptions::new().read(true).open(original_file_name).expect("File Not Found");
+    let mut f = OpenOptions::new().read(true).open(original_file_name.clone()).expect("File Not Found");
     let mut source_code = String::new();
     f.read_to_string(&mut source_code).expect("Failed to Read File");
 
@@ -79,8 +82,9 @@ fn replace_source(path: &String, mutate: &MutantInfo) -> (String, String) {
     let mut m = OpenOptions::new().write(true).read(true).open(file_name).expect("File Not Found");
     let mut mutated_code = String::new();
     m.read_to_string(&mut mutated_code).expect("Failed to Read File");
+    let _ = remove_file(file_name);
 
-    let mut f = OpenOptions::new().write(true).truncate(true).read(true).open(original_file_name).expect("File Not Found");
+    let mut f = OpenOptions::new().write(true).truncate(true).read(true).open(original_file_name.clone()).expect("File Not Found");
     f.write(mutated_code.as_bytes()).expect("Failed to Write File");
 
     return (source_code, original_file_name.clone());
