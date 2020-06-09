@@ -31,18 +31,30 @@ fn main() {
 
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
-    // mut_gen::mutate_file_by_line3(args[1].clone(), 10);
+    // mut_gen::mutate(args[1].clone(), 10);
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 11));
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
     
     // println!("{:#?}", mut_gen::mutate_file_by_line(args[1].clone(), 26));
+<<<<<<< HEAD
     let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), args[2].clone().parse().unwrap());
+=======
+    let mutated_result = mut_gen::mutate(args[1].clone(), 6);
+    
+    
+>>>>>>> da917ec5d648822e58da39fe023d518199132042
     for _x in mutated_result.iter() {
        println!("{} {} {} {}",_x.source_name, _x.file_name, _x.target_line, _x.mutation);
     }
 
+    mut_gen::mutate(args[1].clone(), 3);
+
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
+<<<<<<< HEAD
     let test_list = vec![String::from("combinations_no_collect")];
     println!{"{:?}", test_list};
+=======
+    // let test_list = vec![String::from("combinations_no_collect")];
+>>>>>>> da917ec5d648822e58da39fe023d518199132042
     // mut_test::run_mut_test(&args[1], Some(test_list));
 }  

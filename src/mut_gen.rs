@@ -472,9 +472,10 @@ pub struct MutantInfo {
     pub mutation: String,
 }
 
-pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
+pub fn mutate(file: String, num_line: usize) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     let mut ret = Vec::new();
+
     
     let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: num_line, struct_column: 0, search: true, target:  Pos {
         start_line : 0,
@@ -485,7 +486,6 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         mut_type : String::from(""),
     }};
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    // println!("{:#?}", syntax_tree);
     
     _binopvisitor.visit_file_mut(&mut syntax_tree);
     _binopvisitor.search = false;
