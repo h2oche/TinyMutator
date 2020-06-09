@@ -4,15 +4,49 @@ mod utils;
 use std::process::Command;
 use std::str;
 
+pub enum TestResult {
+    Survived,
+    Killed,
+    CompileError,
+}
+
+/**
+ * Run tests and check whether mutants are killed.
+ * Return lists of mutants and its results.
+ */
+pub fn mut_test(path: String, list_of_mutants: Vec<String>) -> Vec<(String, TestResult)> {
+    let mutants_iter = list_of_mutants.iter();
+    let mut result : Vec<(String, TestResult)> = Vec::new();
+    for mutant in mutants_iter {
+        let original_test_result = run_mut_test(path, &None).unwrap();
+        // @TODO: Substitute source file to mutated source file
+        let mut_test_result = match run_mut_test(path, &None) {
+            Some(v) => v,
+            None => {
+                result.push((mutant.clone(), TestResult::CompileError));
+                continue;
+            }
+        };
+        if check_survive(&mut_test_result, &original_test_result){
+            result.push((mutant.clone(), TestResult::Survived));
+        } else {
+            result.push((mutant.clone(), TestResult::Killed));
+        }
+    }
+    return result;
+}
+
 /**
  * Compare the result of mutation test
  * Return true if survived, false if killed
  */
 pub fn check_survive(mut_test_result: &Vec<(String, bool)>, origin_test_result: &Vec<(String, bool)>) -> bool {
+    // @TODO: This function is not tested(May have some bugs)
     if mut_test_result == origin_test_result{
-        return false;
+        // @TODO: Check equivalence mutant
+        return true;
     }
-    return true;
+    return false;
 }
 
 /**
