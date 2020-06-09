@@ -506,13 +506,13 @@ pub fn mutate(file: String, num_line: usize) -> Vec<MutantInfo> {
         for _m in 0..pos.start_type.len() {
             let mut new_syntax_tree = syn::parse_file(&example_source).unwrap();
             _binopvisitor.visit_file_mut(&mut new_syntax_tree);
-            let mut fz = fs::File::create(format!("{}{}{}{}{}", using.to_string().clone() ,num_line,"_",idx,".rs")).unwrap();
+            let mut fz = fs::File::create(format!("{}{}{}{}{}{}", using.to_string().clone(), "_" ,num_line,"_",idx,".rs")).unwrap();
             fz.write_all(quote!(#new_syntax_tree).to_string().as_bytes());
             
 
             // Format mutated source code.
             Command::new("rustfmt")
-                    .arg(format!("{}{}{}{}{}",using.to_string().clone(),num_line,"_",idx,".rs"))
+                    .arg(format!("{}{}{}{}{}{}",using.to_string().clone(),"_",num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
             

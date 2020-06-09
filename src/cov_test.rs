@@ -21,9 +21,11 @@ pub fn run_test(path: String) -> Option<String> {
     let current_working_dir = utils::get_cwd();
 
     // Make a subprocess & Run 'cargo tarpaulin'
+    println!("Install Tarpaulin");
     let _ = Command::new("cargo")
         .args(&["install", "cargo-tarpaulin"])
         .status(); // Install tarpaulin
+    println!("Run Cargo Tarpaulin");
     let mut shell = Command::new("cargo");
     shell.args(&[
         "tarpaulin",
@@ -42,8 +44,8 @@ pub fn run_test(path: String) -> Option<String> {
 
 #[derive(Debug)]
 pub struct TraceInfo {
-    path: String,
-    traces: Vec<usize>,
+    pub path: String,
+    pub traces: Vec<usize>,
 }
 
 impl TryFrom<&TarpaulinFileLog> for TraceInfo {
