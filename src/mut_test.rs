@@ -48,21 +48,21 @@ pub fn mut_test(path: String, list_of_mutants: Vec<&mut_gen::MutantInfo>) -> Vec
  */
 fn replace_source(mutate: &mut_gen::MutantInfo) -> (String, &String) {
     let current_dir = utils::get_cwd();
-    let file_name : String = mutate.file_name.clone();
-    let original_file_name = String::new();     // @TODO: get origianal file name
+    let file_name : &String = &mutate.file_name;
+    let original_file_name = &mutate.source_name;
 
     // Read original source code and save it.
-    let mut f = File::open(String::new() + &current_dir + "/src/" + &file_name).expect("File Not Found");
+    let mut f = File::open(String::new() + &current_dir + "/src/" + original_file_name).expect("File Not Found");
     let mut source_code = String::new();
     f.read_to_string(&mut source_code).expect("Failed to Read File");
 
     // Read mutated source code and write it to the original file.
-    let mut m = File::open(String::new() + &current_dir + "/src/" + &original_file_name).expect("File Not Found");
+    let mut m = File::open(String::new() + &current_dir + "/src/" + file_name).expect("File Not Found");
     let mut mutated_code = String::new();
     m.read_to_string(&mut mutated_code).expect("Failed to Read File");
     f.write(mutated_code.as_bytes()).expect("Failed to Write File");
 
-    return (source_code, &mutate.file_name);
+    return (source_code, original_file_name);
 }
 
 /**
