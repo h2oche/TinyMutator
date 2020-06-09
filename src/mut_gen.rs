@@ -60,7 +60,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
 
     // println!("{:?}", example_source);
 
-    // preprocess(find all constants and functions in file, ...)
+    // preprocess(find all constants and void functions in file, ...)
     for i in 0..lines_vec.len() {
         let expr2 = syn::parse_str::<Stmt>(&lines_vec[i]);
         // println!("\n\n\n{:?}\n\n\n", expr2);
@@ -206,7 +206,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 _ => {},
                             }
                         },
-                        syn::Expr::Return(exprReturn) => {
+                        syn::Expr::Return(exprReturn) => { 
                             // println!{"reached!"};
                             let mut return_expr = line_to_parse.trim_start().trim_start_matches("return").trim().trim_end_matches(";");
                             // println!("return expression : {:?}", line_to_parse.trim_start());
@@ -327,7 +327,6 @@ impl<'ast> VisitMut for BinOpVisitor {
 
     }
     
-
     fn visit_bin_op_mut(&mut self, node: &mut syn::BinOp) {
         let start = node.span().start();
         let end = node.span().end();
@@ -464,7 +463,7 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         let _muttype = mutated_result[0].to_string().clone();
         if _muttype == "notmutated" {
             continue;
-        }
+        }3
         let mut fz = fs::File::create(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs")).unwrap();
         fz.write_all(mutated_file.as_bytes());
         Command::new("rustfmt")
@@ -476,6 +475,5 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         idx += 1;
     }
     println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
-    
     return ret;
 }
