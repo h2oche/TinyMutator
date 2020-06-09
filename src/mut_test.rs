@@ -28,8 +28,18 @@ impl fmt::Display for TestResult {
  * Run tests and check whether mutants are killed.
  * Return lists of mutants and its results.
  */
+
+ 
+pub struct MutantInfo {
+    pub source_name: String,
+    pub file_name: String,
+    pub target_line: usize,
+    pub mutation: String,
+}
+
+
 pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantInfo, TestResult)> {
-    let mut result : Vec<(String, TestResult)> = Vec::new();
+    let mut result : Vec<(MutantInfo, TestResult)> = Vec::new();
     if list_of_mutants.len() == 0 {
         return result;
     }
@@ -49,19 +59,37 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantIn
         let mut_test_result = match run_mut_test(&path, None) {
             Some(v) => v,
             None => {
-                result.push((mutant, TestResult::CompileError));
+                result.push((MutantInfo {
+                    source_name: mutant.source_name.clone(),
+                    file_name: mutant.file_name.clone(),
+                    target_line: mutant.target_line,
+                    mutation: mutant.mutation.clone(),
+                    
+                }, TestResult::CompileError));
                 restore_source(&path, original_source_code);
                 continue;
             }
         };
         if check_survive(&mut_test_result, &original_test_result){
-            result.push((mutant, TestResult::Survived));
+            result.push((MutantInfo {
+                source_name: mutant.source_name.clone(),
+                file_name: mutant.file_name.clone(),
+                target_line: mutant.target_line,
+                mutation: mutant.mutation.clone(),
+                
+            }, TestResult::Survived));
         } else {
-            result.push((mutant, TestResult::Killed));
+            result.push((MutantInfo {
+                source_name: mutant.source_name.clone(),
+                file_name: mutant.file_name.clone(),
+                target_line: mutant.target_line,
+                mutation: mutant.mutation.clone(),
+                
+            }, TestResult::Killed));
         }
         restore_source(&path, original_source_code);
     }
-    println!("{:?}", result);
+    // println!("{:?}", result);
     return result;
 }
 
