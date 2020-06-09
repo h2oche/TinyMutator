@@ -8,6 +8,7 @@ use std::str;
 use std::fs::File;
 use std::io::prelude::*;
 
+#[derive(Debug)]
 pub enum TestResult {
     Survived,
     Killed,
@@ -39,6 +40,7 @@ pub fn mut_test(path: String, list_of_mutants: Vec<&mut_gen::MutantInfo>) -> Vec
         }
         restore_source(original_source_code);
     }
+    println!("{:?}", result);
     return result;
 }
 
@@ -103,7 +105,7 @@ pub fn run_mut_test(path: &String, tests: Option<Vec<String>>) -> Option<Vec<(St
 
     // Make a subprocess & Run 'cargo test'
     let mut shell = Command::new("cargo");
-    let mut arg_vec : Vec<String> = match tests{
+    let mut arg_vec : Vec<String> = match tests {
         Some(v) => v,
         None => Vec::new(),
     };
