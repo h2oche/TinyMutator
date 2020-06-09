@@ -1,7 +1,7 @@
 mod cov_test;
 mod mut_test;
 mod mut_gen;
-mod report_gen;
+//mod report_gen;
 mod utils;
 use std::env;
 use std::fs;

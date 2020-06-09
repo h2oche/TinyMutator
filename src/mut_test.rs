@@ -1,4 +1,5 @@
 //use std::io;
+//pub mod mut_gen;
 use super::utils;
 use super::mut_gen::MutantInfo;
 use std::process::Command;
@@ -6,6 +7,7 @@ use std::str;
 use std::fs::{remove_file, OpenOptions};
 use std::io::prelude::*;
 use std::fmt;
+//use mut_gen::MutantInfo;
 
 #[derive(Debug)]
 pub enum TestResult {
@@ -30,12 +32,7 @@ impl fmt::Display for TestResult {
  */
 
  
-pub struct MutantInfo {
-    pub source_name: String,
-    pub file_name: String,
-    pub target_line: usize,
-    pub mutation: String,
-}
+
 
 
 pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantInfo, TestResult)> {

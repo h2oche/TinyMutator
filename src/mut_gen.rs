@@ -261,7 +261,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
     return String::from("notmutated:")+&lines_vec.join("\r\n"); // temporary return value
 }
 
-struct Pos {
+pub struct Pos {
     start_line: usize,
     start_column: usize,
     end_line: usize,
