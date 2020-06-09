@@ -504,17 +504,17 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         for _m in 0..pos.start_type.len() {
             let mut new_syntax_tree = syn::parse_file(&example_source).unwrap();
             _binopvisitor.visit_file_mut(&mut new_syntax_tree);
-            let mut fz = fs::File::create(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs")).unwrap();
+            let mut fz = fs::File::create(format!("{}{}{}{}{}", file.clone() ,num_line,"_",idx,".rs")).unwrap();
             fz.write_all(quote!(#new_syntax_tree).to_string().as_bytes());
 
             // Format mutated source code.
             Command::new("rustfmt")
-                    .arg(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"))
+                    .arg(format!("{}{}{}{}{}",file.clone(),num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
             
             
-            ret.push(MutantInfo{source_name : file.clone(),file_name : format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
+            ret.push(MutantInfo{source_name : file.clone(),file_name : format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
             idx += 1;
         }
     }
@@ -528,14 +528,14 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         if _muttype == "notmutated" {
             continue;
         }
-        let mut fz = fs::File::create(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs")).unwrap();
+        let mut fz = fs::File::create(format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs")).unwrap();
         fz.write_all(mutated_file.as_bytes());
         Command::new("rustfmt")
-                    .arg(format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"))
+                    .arg(format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
               
-        ret.push(MutantInfo{source_name : file.clone(), file_name : format!("{}{}{}{}{}", "mutated",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
+        ret.push(MutantInfo{source_name : file.clone(), file_name : format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
         idx += 1;
     }
     println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
