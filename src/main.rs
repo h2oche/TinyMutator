@@ -50,6 +50,6 @@ fn main() {
 
     let result = mut_test::mut_test(args[1].clone(), mutated_result);
     for _x in result.iter() {
-        println!("{}, {}", _x.1, _x.0);
+        println!("{}, {} {} {} {}", _x.1, _x.0.source_name, _x.0.file_name, _x.0.target_line, _x.0.mutation);
     }
 }
