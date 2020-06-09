@@ -1,6 +1,7 @@
 mod cov_test;
 mod mut_test;
 mod mut_gen;
+mod report_gen;
 mod utils;
 use std::env;
 use std::fs;
@@ -35,4 +36,4 @@ fn main() {
 
     let test_list = vec![String::from("combinations_no_collect")];
     mut_test::run_mut_test(&args[1], Some(test_list));
-}  
+}
