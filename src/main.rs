@@ -31,17 +31,21 @@ fn main() {
 
     // print_ast_from_file(); // cargo run ./src/examples/guessing_game.rs
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 19));
-    // mut_gen::mutate_file_by_line3(args[1].clone(), 10);
+    // mut_gen::mutate(args[1].clone(), 10);
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 11));
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
     
     // println!("{:#?}", mut_gen::mutate_file_by_line(args[1].clone(), 26));
-    let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), 5);
+    let mutated_result = mut_gen::mutate(args[1].clone(), 6);
+    
+    
     for _x in mutated_result.iter() {
        println!("{} {} {} {}",_x.source_name, _x.file_name, _x.target_line, _x.mutation);
     }
 
+    mut_gen::mutate(args[1].clone(), 3);
+
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
-    let test_list = vec![String::from("combinations_no_collect")];
-    mut_test::run_mut_test(&args[1], Some(test_list));
+    // let test_list = vec![String::from("combinations_no_collect")];
+    // mut_test::run_mut_test(&args[1], Some(test_list));
 }  
