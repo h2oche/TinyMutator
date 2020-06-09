@@ -21,8 +21,8 @@ pub enum TestResult {
 pub fn mut_test(path: String, list_of_mutants: Vec<&mut_gen::MutantInfo>) -> Vec<(String, TestResult)> {
     let mutants_iter = list_of_mutants.iter();
     let mut result : Vec<(String, TestResult)> = Vec::new();
+    let original_test_result = run_mut_test(&path, None).unwrap();
     for mutant in mutants_iter {
-        let original_test_result = run_mut_test(&path, None).unwrap();
         let original_source_code = replace_source(mutant);
         let mut_test_result = match run_mut_test(&path, None) {
             Some(v) => v,
