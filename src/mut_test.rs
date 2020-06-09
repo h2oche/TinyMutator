@@ -26,15 +26,20 @@ impl fmt::Display for TestResult {
     }
 }
 
+impl Clone for TestResult {
+    fn clone(&self) -> TestResult {
+        match self {
+            TestResult::Survived => TestResult::Survived,
+            TestResult::Killed => TestResult::Killed,
+            TestResult::CompileError => TestResult::CompileError,
+        }
+    }
+}
+
 /**
  * Run tests and check whether mutants are killed.
  * Return lists of mutants and its results.
  */
-
- 
-
-
-
 pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantInfo, TestResult)> {
     let mut result : Vec<(MutantInfo, TestResult)> = Vec::new();
     if list_of_mutants.len() == 0 {

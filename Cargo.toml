@@ -13,4 +13,3 @@ serde_json = "1.0"
 serde = { version = "1.0.111", features = ["derive"]}
 rand = "0.7.3"
 proc-macro2 = { version = "1.0.18", features = ["span-locations"]}
-typed-html = "0.2.2"
