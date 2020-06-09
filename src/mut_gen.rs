@@ -475,7 +475,7 @@ pub struct MutantInfo {
 pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     let mut ret = Vec::new();
-
+    
     let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: num_line, struct_column: 0, search: true, target:  Pos {
         start_line : 0,
         start_column: 0,
@@ -485,11 +485,14 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         mut_type : String::from(""),
     }};
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    println!("{:#?}", syntax_tree);
+    // println!("{:#?}", syntax_tree);
     
     _binopvisitor.visit_file_mut(&mut syntax_tree);
     _binopvisitor.search = false;
     let mut idx = 0;
+    
+    let mut cutted = file.clone().to_string();
+    let mut using = &cutted[0..cutted.len()-3];
     for _n in 0.._binopvisitor.vec_pos.len() {
         let pos = &_binopvisitor.vec_pos[_n];
         let _muttype = pos.mut_type.clone();
@@ -504,17 +507,18 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         for _m in 0..pos.start_type.len() {
             let mut new_syntax_tree = syn::parse_file(&example_source).unwrap();
             _binopvisitor.visit_file_mut(&mut new_syntax_tree);
-            let mut fz = fs::File::create(format!("{}{}{}{}{}", file.clone() ,num_line,"_",idx,".rs")).unwrap();
+            let mut fz = fs::File::create(format!("{}{}{}{}{}", using.to_string().clone() ,num_line,"_",idx,".rs")).unwrap();
             fz.write_all(quote!(#new_syntax_tree).to_string().as_bytes());
+            
 
             // Format mutated source code.
             Command::new("rustfmt")
-                    .arg(format!("{}{}{}{}{}",file.clone(),num_line,"_",idx,".rs"))
+                    .arg(format!("{}{}{}{}{}",using.to_string().clone(),num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
             
             
-            ret.push(MutantInfo{source_name : file.clone(),file_name : format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
+            ret.push(MutantInfo{source_name : using.to_string().clone(),file_name : format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
             idx += 1;
         }
     }
@@ -528,14 +532,14 @@ pub fn mutate_file_by_line3(file: String, num_line: usize) -> Vec<MutantInfo> {
         if _muttype == "notmutated" {
             continue;
         }
-        let mut fz = fs::File::create(format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs")).unwrap();
+        let mut fz = fs::File::create(format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs")).unwrap();
         fz.write_all(mutated_file.as_bytes());
         Command::new("rustfmt")
-                    .arg(format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs"))
+                    .arg(format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"))
                     .spawn()
                     .expect("rustfmt command failed to start");
               
-        ret.push(MutantInfo{source_name : file.clone(), file_name : format!("{}{}{}{}{}", file.clone(),num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
+        ret.push(MutantInfo{source_name : using.to_string().clone(), file_name : format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), target_line : num_line, mutation : _muttype.clone() });
         idx += 1;
     }
     println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
