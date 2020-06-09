@@ -80,9 +80,9 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                     syn::Stmt::Item(item) => {
                         // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
                         match item {
-                            syn::Item::Const(itemConst) => {
+                            syn::Item::Const(item_const) => {
                                 // println!("{}", line);
-                                // println!("{:#?}", &itemConst);
+                                // println!("{:#?}", &item_const);
                                 let mut const_expr: Vec<_> = lines_vec[i].split("=").collect();
                                 // println!("{:?}\n\n\n", const_expr);
                                 if const_expr.len() > 1 {
@@ -159,7 +159,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                 syn::Stmt::Item(item) => {
                     // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
                     match item {
-                        syn::Item::Const(itemConst) => { // constant replacement
+                        syn::Item::Const(item_const) => { // constant replacement
                             let mut new_constant_vec: Vec<_> = constants
                                 .choose_multiple(&mut rand::thread_rng(), 1)
                                 .collect();
@@ -186,14 +186,14 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                 syn::Stmt::Expr(expr) => { () },
                 syn::Stmt::Semi(expr, semi) => { 
                     match expr {
-                        syn::Expr::Call(exprCall) => {
-                            // println!("{:?}", *(exprCall.func));
-                            match *(exprCall.func) {
-                                syn::Expr::Path(exprPath) => {
+                        syn::Expr::Call(expr_call) => {
+                            // println!("{:?}", *(expr_call.func));
+                            match *(expr_call.func) {
+                                syn::Expr::Path(expr_path) => {
                                     // println!("Wow~~~");
                                     // println!("{:?}", void_functions);
                                     // println!("Wow~~~");
-                                    if void_functions.contains(&exprPath.path.segments[0].ident.to_string()) {
+                                    if void_functions.contains(&expr_path.path.segments[0].ident.to_string()) {
                                         let leading_spaces = line_to_parse.len() - line_to_parse.trim_start().len();
                                         // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
                                         let void_method_call_string = " ".repeat(leading_spaces) + &("// ".to_string()) + line_to_parse.trim_start();
@@ -207,7 +207,7 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 _ => {},
                             }
                         },
-                        syn::Expr::Return(exprReturn) => { 
+                        syn::Expr::Return(expr_return) => { 
                             // println!{"reached!"};
                             let mut return_expr = line_to_parse.trim_start().trim_start_matches("return").trim().trim_end_matches(";");
                             // println!("return expression : {:?}", line_to_parse.trim_start());
@@ -415,7 +415,6 @@ pub struct MutantInfo {
 pub fn mutate(file: String, num_line: usize) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     let mut ret = Vec::new();
-
     
     let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: num_line, struct_column: 0, search: true, target:  Pos {
         start_line : 0,

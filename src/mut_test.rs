@@ -7,6 +7,7 @@ use std::fs::{remove_file, OpenOptions};
 use std::io::prelude::*;
 use std::fmt;
 
+#[derive(Debug)]
 pub enum TestResult {
     Survived,
     Killed,
@@ -27,7 +28,7 @@ impl fmt::Display for TestResult {
  * Run tests and check whether mutants are killed.
  * Return lists of mutants and its results.
  */
-pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(String, TestResult)> {
+pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantInfo, TestResult)> {
     let mut result : Vec<(String, TestResult)> = Vec::new();
     if list_of_mutants.len() == 0 {
         return result;
@@ -48,18 +49,19 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(String, 
         let mut_test_result = match run_mut_test(&path, None) {
             Some(v) => v,
             None => {
-                result.push((mutant.file_name.clone(), TestResult::CompileError));
+                result.push((mutant, TestResult::CompileError));
                 restore_source(&path, original_source_code);
                 continue;
             }
         };
         if check_survive(&mut_test_result, &original_test_result){
-            result.push((mutant.file_name.clone(), TestResult::Survived));
+            result.push((mutant, TestResult::Survived));
         } else {
-            result.push((mutant.file_name.clone(), TestResult::Killed));
+            result.push((mutant, TestResult::Killed));
         }
         restore_source(&path, original_source_code);
     }
+    println!("{:?}", result);
     return result;
 }
 
@@ -139,7 +141,7 @@ pub fn run_mut_test(path: &String, tests: Option<Vec<String>>) -> Option<Vec<(St
 
     // Make a subprocess & Run 'cargo test'
     let mut shell = Command::new("cargo");
-    let mut arg_vec : Vec<String> = match tests{
+    let mut arg_vec : Vec<String> = match tests {
         Some(v) => v,
         None => Vec::new(),
     };

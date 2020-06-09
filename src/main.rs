@@ -1,6 +1,7 @@
 mod cov_test;
 mod mut_test;
 mod mut_gen;
+mod report_gen;
 mod utils;
 use std::env;
 use std::fs;
@@ -20,9 +21,9 @@ fn print_ast_from_file() -> Result<()> {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect(); // args[1] : directory for mutating
     if args.len() < 2 {
-        panic!("No Specified Project Directory");
+        panic!("No Specified Project Directory or Line");
     }
     let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
 
@@ -34,15 +35,15 @@ fn main() {
         let path = &trace.path;
         let line_list = &trace.traces;
         let line_iter = line_list.iter();
-        for line in line_iter{
+        for line in line_iter {
             println!("Generating Mutants for {}, {}", path, *line);
             mutated_result.append(&mut mut_gen::mutate(path.clone(), *line));
             counter += 1;
-            if counter > 20{
+            if counter > 20 {
                 break;
             }
         }
-        if counter > 20{
+        if counter > 20 {
             break;
         }
     }
@@ -51,5 +52,4 @@ fn main() {
     for _x in result.iter() {
         println!("{}, {}", _x.1, _x.0);
     }
-    
-}  
+}
