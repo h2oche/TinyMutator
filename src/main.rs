@@ -36,12 +36,12 @@ fn main() {
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 3));
     
     // println!("{:#?}", mut_gen::mutate_file_by_line(args[1].clone(), 26));
-    let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), 5);
-    for _x in mutated_result.iter() {
-        println!("{} {} {}",_x.file_name, _x.target_line, _x.mutation);
-    }
+    ///let mutated_result = mut_gen::mutate_file_by_line3(args[1].clone(), 5);
+    //for _x in mutated_result.iter() {
+    //    println!("{} {} {}",_x.file_name, _x.target_line, _x.mutation);
+    //}
 
     // println!("{:?}", mut_gen::mutate_file_by_line(args[1].clone(), 4));
     let test_list = vec![String::from("combinations_no_collect")];
-    // mut_test::run_mut_test(args[1].clone(), Some(test_list));
+    mut_test::run_mut_test(args[1].clone(), Some(test_list));
 }  

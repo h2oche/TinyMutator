@@ -5,30 +5,46 @@ use std::process::Command;
 use std::str;
 
 /**
+ * Compare the result of mutation test
+ * Return true if survived, false if killed
+ */
+pub fn check_survive(mut_test_result: &Vec<(String, bool)>, origin_test_result: &Vec<(String, bool)>) -> bool {
+    if mut_test_result == origin_test_result{
+        return false;
+    }
+    return true;
+}
+
+/**
  * Do 'cargo test' with the given list of tests.
  * Do all available tests whenever None is given.
+ * Return list of the test results
  */ 
-pub fn run_mut_test(path: String, tests: Option<Vec<String>>) {
+pub fn run_mut_test(path: String, tests: &Option<Vec<String>>) -> Option<Vec<(String, bool)>> {
     // Get Absolute path
     let absolute_path = utils::get_abs_path(&path);
 
     // Make a subprocess & Run 'cargo test'
     let mut shell = Command::new("cargo");
-    let mut arg_vec : Vec<String> = match tests{
+    let mut arg_vec : &Vec<String> = match tests{
         Some(v) => v,
-        None => Vec::new()
+        None => &Vec::new()
     };
     arg_vec.insert(0, String::from("test"));
-    shell.args(&arg_vec);
+    shell.args(arg_vec);
     shell.current_dir(absolute_path);
     let output = match shell.output() {
         Ok(v) => v,
         Err(_) => panic!("Cargo Test Failed"),
     };
+    if !output.status.success() {
+        // Compile failed
+        return None;
+    }
     let output = String::from_utf8(output.stdout).unwrap();
     let parsed = parse_result(output).unwrap();
-    println!("{:?}", parsed);
-    return;
+    //println!("{:?}", parsed);
+    return Some(parsed);
 }
 
 /**
