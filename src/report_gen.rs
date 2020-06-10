@@ -122,7 +122,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                     <div class=\"parent\">File Name</div>\n\
                     <div class=\"parent\">Survived Mutants</div>\n\
                     <div class=\"parent\">Killed Mutants</div>\n\
-                    <div class=\"parent\">Uncompiled Mutants</div>\n\
+                   
                     <div class=\"parent\">Mutation Score</div>\n\
                 </div>\n"
     );
@@ -133,7 +133,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                 <div class=\"item\">".to_string() + &(row.0.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.1.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.2.to_string()) + &("</div>\n".to_string()) +
-                &"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
+                //&"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.4.to_string()) + &("</div>\n".to_string()) +
             &("</div>\n".to_string()))
         );
@@ -144,7 +144,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
             <div class=\"parent\">Type of Mutants</div>\n\
             <div class=\"parent\">Survived Mutants</div>\n\
             <div class=\"parent\">Killed Mutants</div>\n\
-            <div class=\"parent\">Uncompiled Mutants</div>\n\
+           
             <div class=\"parent\">Mutation Score</div>\n\
         </div>\n")
     );
@@ -155,7 +155,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                 <div class=\"item\">".to_string() + &(row.0.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.1.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.2.to_string()) + &("</div>\n".to_string()) +
-                &"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
+           //     &"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.4.to_string()) + &("</div>\n".to_string()) +
             &("</div>\n".to_string()))
         );        
