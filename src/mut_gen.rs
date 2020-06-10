@@ -425,7 +425,7 @@ pub fn mutate(file: String, num_line: usize) -> Vec<MutantInfo> {
         mut_type : String::from(""),
     }};
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    println!("{:#?}", syntax_tree);
+    //println!("{:#?}", syntax_tree);
     
     _binopvisitor.visit_file_mut(&mut syntax_tree);
     _binopvisitor.search = false;
