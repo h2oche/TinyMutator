@@ -13,3 +13,6 @@
 [submodule "rustlings"]
 	path = rustlings
 	url = https://github.com/rust-lang/rustlings
+[submodule "regex"]
+	path = regex
+	url = https://github.com/rust-lang/regex.git
