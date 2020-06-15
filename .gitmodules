@@ -7,3 +7,9 @@
 [submodule "itertools"]
 	path = itertools
 	url = https://github.com/rust-itertools/itertools.git
+[submodule "toml-rs"]
+	path = toml-rs
+	url = https://github.com/alexcrichton/toml-rs.git
+[submodule "rustlings"]
+	path = rustlings
+	url = https://github.com/rust-lang/rustlings
