@@ -416,11 +416,12 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
     let example_source = fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     let mut ret = Vec::new();
     
-    let mut syntax_tree = syn::parse_file(&example_source).unwrap();
+    let syntax_tree_origin = syn::parse_file(&example_source).unwrap();
     //println!("{:#?}", syntax_tree);
 
     let num_line_iter = num_line.iter();
     for num_line in num_line_iter {
+        let mut syntax_tree = syntax_tree_origin.clone();
         let mut _binopvisitor = BinOpVisitor { vec_pos: Vec::new(), struct_line: *num_line, struct_column: 0, search: true, target:  Pos {
             start_line : 0,
             start_column: 0,
@@ -495,6 +496,9 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         }
         // println!("{:?}", mutants_by_string);
         println!("For debug : using AST = {} mutants, using String = {} mutants", woo, idx-woo);
+        if ret.len() > 20 {
+            break;
+        }
     }
     return ret;
 }

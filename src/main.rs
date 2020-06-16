@@ -27,18 +27,24 @@ fn main() {
     if args.len() < 2 {
         panic!("No Specified Project Directory or Line");
     }
-    let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
 
+    let tarpaulin_report_path;
+    //if args.len() < 3 {
+        tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
+    //} else {
+    //    tarpaulin_report_path = args[2].clone();
+    //}
+    
     let trace_info = cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
     let mut mutated_result: Vec<MutantInfo> = Vec::new();
     let trace_iter = trace_info.iter();
     for trace in trace_iter {
         let path = &trace.path;
         let line_list = &trace.traces;
-        //if path.contains("combinations"){
+        if path.contains("combinations"){
             println!("Generating Mutants for {}, {:?}", path, line_list);
             mutated_result.append(&mut mut_gen::mutate(path.clone(), line_list.clone()));
-        //}  
+        }  
         //if mutated_result.len() > 20 {
         //    break;
         //}
