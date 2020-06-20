@@ -47,7 +47,13 @@ fn main() {
     if args.len() < 2 {
         panic!("No Specified Project Directory or Line");
     }
-    let tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
+
+    let tarpaulin_report_path;
+    //if args.len() < 3 {
+    tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
+    //} else {
+    //    tarpaulin_report_path = args[2].clone();
+    //}
 
     let trace_info =
         cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");

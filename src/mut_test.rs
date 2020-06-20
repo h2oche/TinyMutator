@@ -183,16 +183,14 @@ pub fn run_mut_test(path: &String, tests: Option<Vec<String>>) -> Option<Vec<(St
         Err(_) => panic!("Cargo Test Failed"),
     };
     if !output.status.success() {
-        // Compile failed
         if output.status.code().unwrap() != 101 {
+            // Compile failed
             println!("{}", output.status);
             return None;
         }
+        // Test failed
     }
     let output = String::from_utf8(output.stdout).unwrap();
-    //println!("======================");
-    //println!("{}", output);
-    //println!("====================");
     let parsed = parse_result(output).unwrap();
     return Some(parsed);
 }
