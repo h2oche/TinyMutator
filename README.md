@@ -1,5 +1,7 @@
 # cs453-project
 
+This project use nightly feature(rustc_private).
+
 ## Usage
 
 1. Get coverage report of existing Rust project by using [tarpaulin](https://github.com/xd009642/tarpaulin)
@@ -26,8 +28,9 @@
     cargo tarpaulin --out Json --output-dir TARGET_PATH
     ```
   
-  - Download rustfmt
+  - Download rustfmt and rustc-dev
 
     ```
     rustup component add rustfmt
+    rustup component add rustc-dev
     ```
