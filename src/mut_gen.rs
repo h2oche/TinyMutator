@@ -1,14 +1,135 @@
-extern crate proc_macro;
-extern crate proc_macro2;
-extern crate syn;
 use quote::quote;
 use rand::{seq::SliceRandom, Rng};
+use regex::Regex;
+use rustc_errors::registry;
+use rustc_hir::intravisit::{self, NestedVisitorMap, Visitor};
+use rustc_hir::Expr as HirExpr;
+use rustc_middle::hir::map::Map;
+use rustc_middle::ty::TyCtxt;
+use rustc_session::config::{self, CrateType};
+use rustc_span::{source_map, Span};
+use std::fs::File;
+use std::io::prelude::*;
+use std::path;
+use std::process;
+use std::str;
 use std::{cmp, env, fs, io::prelude::*, process::Command, vec};
 use syn::{
     spanned::Spanned,
     visit_mut::{self, VisitMut},
     Expr, Pat, Stmt,
 };
+
+pub struct OptionCollector<'tcx> {
+    tcx: TyCtxt<'tcx>,
+    spans: Vec<Span>,
+}
+impl<'tcx> Visitor<'tcx> for OptionCollector<'tcx> {
+    type Map = Map<'tcx>;
+    fn nested_visit_map(&mut self) -> NestedVisitorMap<Self::Map> {
+        NestedVisitorMap::All(self.tcx.hir())
+    }
+    fn visit_expr(&mut self, expr: &'tcx HirExpr) {
+        let table = self.tcx.typeck_tables_of(expr.hir_id.owner);
+        let ty = table.expr_ty(expr);
+        let ty_str = ty.to_string();
+        let span = expr.span;
+        // check if ty is std::option::Option<T>
+        lazy_static! {
+            static ref OPTION_TYPE_RE: Regex = Regex::new(r"^std::option::Option<.+>$").unwrap();
+        }
+        if OPTION_TYPE_RE.is_match(&ty_str) {
+            // println!("***********************************");
+            // println!("Span : {:#?}, Type: {}", span, ty_str);
+            // println!("***********************************");
+            self.spans.push(span);
+        }
+        // println!("{:#?}", expr);
+        intravisit::walk_expr(self, expr);
+    }
+}
+
+impl<'tcx> OptionCollector<'tcx> {
+    fn new(tcx: TyCtxt<'tcx>) -> OptionCollector<'tcx> {
+        OptionCollector {
+            tcx,
+            spans: Vec::new(),
+        }
+    }
+
+    // fn collect(&mut self, )
+}
+
+pub fn collect_option_expr_position(target_file: String) -> Vec<String> {
+    let source_code =
+        fs::read_to_string(&target_file.clone()).expect("Something went wrong reading the file");
+
+    let out = process::Command::new("rustc")
+        .arg("--print=sysroot")
+        .current_dir(".")
+        .output()
+        .unwrap();
+    let sysroot = str::from_utf8(&out.stdout).unwrap().trim();
+
+    let mut spans = Vec::new();
+
+    let crate_types = vec![CrateType::Staticlib];
+    let config = rustc_interface::Config {
+        opts: config::Options {
+            maybe_sysroot: Some(path::PathBuf::from(sysroot)),
+            crate_types,
+            ..config::Options::default()
+        },
+        input: config::Input::Str {
+            // name: source_map::FileName::Custom("main.rs".to_string()),
+            name: source_map::FileName::Custom("lib.rs".to_owned()),
+            input: source_code.to_owned(),
+        },
+        diagnostic_output: rustc_session::DiagnosticOutput::Default,
+        crate_cfg: rustc_hash::FxHashSet::default(),
+        input_path: None,
+        output_dir: None,
+        output_file: None,
+        file_loader: None,
+        stderr: None,
+        crate_name: None,
+        lint_caps: rustc_hash::FxHashMap::default(),
+        register_lints: None,
+        override_queries: None,
+        registry: registry::Registry::new(&rustc_error_codes::DIAGNOSTICS),
+    };
+
+    rustc_interface::run_compiler(config, |compiler| {
+        compiler.enter(|queries| {
+            // let parse = queries.parse().unwrap().take();
+            // println!("=====================================");
+            // println!("{:#?}", parse);
+            // println!("=====================================");
+
+            // Analyze the crate and inspect the types under the cursor.
+            queries.global_ctxt().unwrap().take().enter(|tcx| {
+                // Every compilation contains a single crate.
+                let krate = tcx.hir().krate();
+                let mut collector = OptionCollector::new(tcx);
+                intravisit::walk_crate(&mut collector, krate);
+                // println!("{:#?}", collector.spans);
+                for span in collector.spans {
+                    let span_str = format!("{:?}", span);
+                    spans.push(span_str);
+                    // let lo = span.lo();
+                    // let hi = span.hi();
+                    // println!("lo : {:?}", lo);
+                    // println!("hi : {:?}", hi);
+                }
+                // spans.append(&mut collector.spans);
+            })
+        });
+    });
+    // print spans
+    // println!("{:#?}", spans);
+
+    spans
+}
 
 /**
  * Get smallest list of lines which is parsable with ast
@@ -550,11 +671,11 @@ pub struct MutantInfo {
 }
 
 pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
+    let mut ret = Vec::new();
     let example_source =
         fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
-    let mut ret = Vec::new();
     let mut syntax_tree = syn::parse_file(&example_source).unwrap();
-    //println!("{:#?}", syntax_tree);
+    // //println!("{:#?}", syntax_tree);
 
     let num_line_iter = num_line.iter();
     for num_line in num_line_iter {
@@ -694,6 +815,7 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             });
             idx += 1;
         }
+
         // println!("{:?}", mutants_by_string);
         println!(
             "For debug : using AST = {} mutants, using String = {} mutants",
@@ -701,5 +823,96 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             idx - woo
         );
     }
+
+    // add option mutator
+    let option_positions = collect_option_expr_position(file.clone());
+    // println!("option_pos : {:?}", option_positions);
+
+    let original_source =
+        fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
+
+    let original_lines = original_source
+        .lines()
+        .map(|line| line.to_owned())
+        .collect::<Vec<_>>();
+    let mut option_idx = 0;
+
+    for op_pos in option_positions {
+        // parse op_pos
+        lazy_static! {
+            static ref SPAN_EXTRACT_RE: Regex = Regex::new(
+                r"^<.+>:(?P<start_line>\d+):(?P<start_col>\d+): (?P<end_line>\d+):(?P<end_col>\d+)$"
+            )
+            .unwrap();
+        }
+        let captures = SPAN_EXTRACT_RE.captures(&op_pos).unwrap();
+        let start_line = captures["start_line"].parse::<usize>().unwrap() - 1;
+        let start_col = captures["start_col"].parse::<usize>().unwrap() - 1;
+        let end_line = captures["end_line"].parse::<usize>().unwrap() - 1;
+        let end_col = captures["end_col"].parse::<usize>().unwrap() - 1;
+
+        // ignore multi-line
+        if start_line != end_line {
+            continue;
+        }
+
+        let target_expr_str = original_lines[start_line][start_col..end_col].to_owned();
+        // let target_expr_str = target_line[start_col..end_col].to_owned();
+        let NONE_STR: &'static str = "None";
+
+        // ignore `None`
+        if target_expr_str == NONE_STR.clone() {
+            continue;
+        }
+
+        // replace option pos to None
+        let mut original_lines_copy = original_lines
+            .iter()
+            .map(|line| line.to_owned().clone())
+            .collect::<Vec<_>>();
+
+        let template_line = original_lines_copy[start_line].clone();
+        let prefix = template_line[0..start_col].to_owned();
+        let suffix = template_line[end_col..template_line.len()].to_owned();
+        let mut mutated_line = String::new();
+        mutated_line.push_str(&prefix);
+        mutated_line.push_str(NONE_STR);
+        mutated_line.push_str(&suffix);
+        // println!("target_expr({}): {}", start_line + 1, target_expr_str);
+        // println!("mutated : {}", mutated_line);
+
+        original_lines_copy[start_line] = mutated_line;
+        let mutated_source = original_lines_copy.join("\n");
+
+        // save mutated file
+        let cutted = file.clone().to_owned();
+        let using = &cutted[0..cutted.len() - 3];
+        let mutated_path = format!(
+            "{}{}{}{}{}{}",
+            using.clone(),
+            "_",
+            start_line,
+            "_",
+            option_idx,
+            ".rs"
+        );
+        let mut fz = fs::File::create(mutated_path.clone()).unwrap();
+        fz.write_all(mutated_source.as_bytes()).expect("write fail");
+        // Format mutated source code
+        Command::new("rustfmt")
+            .arg(mutated_path.clone())
+            .spawn()
+            .expect("rustfmt command failed to start");
+        // create mutant info
+        ret.push(MutantInfo {
+            source_name: using.to_owned().clone(),
+            file_name: mutated_path.clone(),
+            target_line: start_line,
+            mutation: "OptionToNone".to_owned(),
+        });
+        // update option_idx
+        option_idx += 1;
+    }
+
     return ret;
 }
