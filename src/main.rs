@@ -29,6 +29,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use syn::Result;
+use std::time::SystemTime;
 
 fn print_ast_from_file() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -49,29 +50,33 @@ fn main() {
     }
 
     let tarpaulin_report_path;
-    //if args.len() < 3 {
-    tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
-    //} else {
-    //    tarpaulin_report_path = args[2].clone();
-    //}
+    if args.len() < 3 {
+        tarpaulin_report_path = cov_test::run_test(args[1].clone()).unwrap();
+    } else {
+        tarpaulin_report_path = args[2].clone();
+    }
 
     let trace_info =
         cov_test::parse(&tarpaulin_report_path).expect("tarpaulin report parsing error");
     let mut mutated_result: Vec<MutantInfo> = Vec::new();
     let trace_iter = trace_info.iter();
+    let before_mutate = SystemTime::now();
     for trace in trace_iter {
         let path = &trace.path;
         let line_list = &trace.traces;
-        //if path.contains("combinations"){
         println!("Generating Mutants for {}, {:?}", path, line_list);
         mutated_result.append(&mut mut_gen::mutate(path.clone(), line_list.clone()));
-        //}
-        //if mutated_result.len() > 20 {
-        //    break;
-        //}
     }
+    let after_mutate = SystemTime::now();
+    let mutation_time = after_mutate.elapsed().unwrap().as_secs() - before_mutate.elapsed().unwrap().as_secs();
+    println!("Time Elapsed for Generating Mutants : {}s", mutation_time);
 
+    let before_mut_test = SystemTime::now();
     let result = mut_test::mut_test(args[1].clone(), mutated_result);
+    let after_mut_test = SystemTime::now();
+    let mutation_time = after_mut_test.elapsed().unwrap().as_secs() - before_mut_test.elapsed().unwrap().as_secs();
+    println!("Time Elapsed for Testing Mutants : {}s", mutation_time);
+    
     for _x in result.iter() {
         println!(
             "{}, {} {} {} {}",
