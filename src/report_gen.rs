@@ -1,18 +1,16 @@
 use super::mut_gen::MutantInfo;
 use super::mut_test::TestResult;
 use std::{
+    fs,
     fs::File,
+    io,
     io::prelude::*,
+    path::PathBuf,
 };
-// use typed_html::{
-//     html,
-//     dom::DOMTree,
-//     types::{Class, SpacedSet},
-// };
 
 // MutantInfo : source_name, file_name, target_line, mutation
-// TestResult : Survived, Killed, CompileError
-pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> String {
+// TestResult : Survived, Killed, CompileError, Timeout
+pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>){
     let mut table_by_file: Vec<(String, i32, i32, i32, String)> = Vec::new(); // (filename, survived, killed, compile error, mutation score)
     let mut table_by_type: Vec<(String, i32, i32, i32, String)> = Vec::new(); // (filename, survived, killed, compile error, mutation score)
     let mut files: Vec<String> = Vec::new();
@@ -31,6 +29,9 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                         table_by_file[index] = (table_by_file[index].0.clone(), table_by_file[index].1, table_by_file[index].2 + 1, table_by_file[index].3, table_by_file[index].4.clone());
                     },
                     TestResult::CompileError => {
+                        // table_by_file[index] = (table_by_file[index].0.clone(), table_by_file[index].1, table_by_file[index].2, table_by_file[index].3 + 1, table_by_file[index].4.clone());
+                    },
+                    TestResult::Timeout => {
                         table_by_file[index] = (table_by_file[index].0.clone(), table_by_file[index].1, table_by_file[index].2, table_by_file[index].3 + 1, table_by_file[index].4.clone());
                     },
                 }
@@ -45,8 +46,12 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                         table_by_file.push((x.0.source_name.clone(), 0, 1, 0, "".to_string()));
                     },
                     TestResult::CompileError => {
+                        // table_by_file.push((x.0.source_name.clone(), 0, 0, 1, "".to_string()));
+                    },
+                    TestResult::Timeout => {
                         table_by_file.push((x.0.source_name.clone(), 0, 0, 1, "".to_string()));
                     },
+                    
                 }
             }
         }
@@ -60,6 +65,9 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                         table_by_type[index] = (table_by_type[index].0.clone(), table_by_type[index].1, table_by_type[index].2 + 1, table_by_type[index].3, table_by_type[index].4.clone());
                     },
                     TestResult::CompileError => {
+                        // table_by_type[index] = (table_by_type[index].0.clone(), table_by_type[index].1, table_by_type[index].2, table_by_type[index].3 + 1, table_by_type[index].4.clone());
+                    },
+                    TestResult::Timeout => {
                         table_by_type[index] = (table_by_type[index].0.clone(), table_by_type[index].1, table_by_type[index].2, table_by_type[index].3 + 1, table_by_type[index].4.clone());
                     },
                 }    
@@ -74,6 +82,9 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                         table_by_type.push((x.0.mutation.clone(), 0, 1, 0, "".to_string()));
                     },
                     TestResult::CompileError => {
+                        // table_by_type.push((x.0.mutation.clone(), 0, 0, 1, "".to_string()));
+                    },
+                    TestResult::Timeout => {
                         table_by_type.push((x.0.mutation.clone(), 0, 0, 1, "".to_string()));
                     },
                 }    
@@ -101,8 +112,8 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
     }
 
     mutation_score = (((killed as f32) * 100_f32 / (survived as f32 + killed as f32)).round() as i32).to_string() + &("%".to_string());
-    table_by_file.push(("Total".to_string(), survived, killed, compile_error, mutation_score.clone()));
-    table_by_type.push(("Total".to_string(), survived, killed, compile_error, mutation_score.clone()));
+    table_by_file.push(("total".to_string(), survived, killed, compile_error, mutation_score.clone()));
+    table_by_type.push(("total".to_string(), survived, killed, compile_error, mutation_score.clone()));
 
     // println!("{:?}", table_by_file);
     // println!("{:?}", table_by_type);
@@ -121,7 +132,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                     <div class=\"parent\">File Name</div>\n\
                     <div class=\"parent\">Survived Mutants</div>\n\
                     <div class=\"parent\">Killed Mutants</div>\n\
-                   
+                    <div class=\"parent\">Timeout Mutants</div>\n\
                     <div class=\"parent\">Mutation Score</div>\n\
                 </div>\n"
     );
@@ -132,7 +143,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                 <div class=\"item\">".to_string() + &(row.0.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.1.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.2.to_string()) + &("</div>\n".to_string()) +
-                //&"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
+                &"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.4.to_string()) + &("</div>\n".to_string()) +
             &("</div>\n".to_string()))
         );
@@ -143,7 +154,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
             <div class=\"parent\">Type of Mutants</div>\n\
             <div class=\"parent\">Survived Mutants</div>\n\
             <div class=\"parent\">Killed Mutants</div>\n\
-           
+            <div class=\"parent\">Timeout Mutants</div>\n\
             <div class=\"parent\">Mutation Score</div>\n\
         </div>\n")
     );
@@ -154,7 +165,7 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                 <div class=\"item\">".to_string() + &(row.0.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.1.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.2.to_string()) + &("</div>\n".to_string()) +
-           //     &"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
+               &"<div class=\"item\">".to_string() + &(row.3.to_string()) + &("</div>\n".to_string()) +
                 &"<div class=\"item\">".to_string() + &(row.4.to_string()) + &("</div>\n".to_string()) +
             &("</div>\n".to_string()))
         );        
@@ -208,18 +219,20 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
     .item {\n\
         margin-bottom: 20px;\n\
         text-align: center;\n\
+        display: table-cell;\n\
+        vertical-align: middle;\n\
         padding: 5px;\n\
         width: 15%;\n\
         display: inline-block;\n\
     }";
 
-    let doc_name = path.clone() + &("/report.html".to_string());
+    fs::create_dir(&(path.clone() + &("/Tiny_Mutator_Report")));
+
+    let doc_name = path.clone() + &("/Tiny_Mutator_Report/report.html".to_string());
     let mut file = File::create(doc_name.clone()).unwrap();
     file.write_all(doc.as_bytes());
 
-    let css_name = path.clone() + &("/style.css".to_string());
+    let css_name = path.clone() + &("/Tiny_Mutator_Report/style.css".to_string());
     let mut file = File::create(css_name.clone()).unwrap();
     file.write_all(css.as_bytes());
-
-    return doc;
 }

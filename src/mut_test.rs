@@ -7,6 +7,7 @@ use std::str;
 use std::fs::{remove_file, OpenOptions};
 use std::io::prelude::*;
 use std::fmt;
+use shared_child::SharedChild;
 //use mut_gen::MutantInfo;
 
 #[derive(Debug)]
@@ -14,6 +15,7 @@ pub enum TestResult {
     Survived,
     Killed,
     CompileError,
+    Timeout,
 }
 
 impl fmt::Display for TestResult {
@@ -22,6 +24,7 @@ impl fmt::Display for TestResult {
             TestResult::Survived => write!(f, "Survived"),
             TestResult::Killed => write!(f, "Killed"),
             TestResult::CompileError => write!(f, "CompileError"),
+            TestResult::Timeout => write!(f, "Timeout"),
         }
     }
 }
@@ -32,6 +35,7 @@ impl Clone for TestResult {
             TestResult::Survived => TestResult::Survived,
             TestResult::Killed => TestResult::Killed,
             TestResult::CompileError => TestResult::CompileError,
+            TestResult::Timeout =>  TestResult::Timeout,
         }
     }
 }
@@ -47,27 +51,28 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantIn
     }
     let mutants_iter = list_of_mutants.iter();
     println!("Generating Original Testing Data");
-    let original_test_result = run_mut_test(&path, None).unwrap();
-    /*let original_test_result2 = run_mut_test(&path, None).unwrap();
-    if check_survive(&original_test_result2, &original_test_result){
-        println!("survive");
-    } else {
-        println!("killed");
-    }
-    return result;*/
+    let original_test_result = run_mut_test(&path, None, true).unwrap();
     
     for mutant in mutants_iter {
         let original_source_code = replace_source(&path, mutant);
-        let mut_test_result = match run_mut_test(&path, None) {
-            Some(v) => v,
-            None => {
-                result.push((MutantInfo {
-                    source_name: mutant.source_name.clone(),
-                    file_name: mutant.file_name.clone(),
-                    target_line: mutant.target_line,
-                    mutation: mutant.mutation.clone(),
-                    
-                }, TestResult::CompileError));
+        let mut_test_result = match run_mut_test(&path, None, false) {
+            Ok(v) => v,
+            Err(code) => {
+                if code == 0 {
+                    result.push((MutantInfo {
+                        source_name: mutant.source_name.clone(),
+                        file_name: mutant.file_name.clone(),
+                        target_line: mutant.target_line,
+                        mutation: mutant.mutation.clone(),
+                    }, TestResult::CompileError));
+                } else if code == 1 {
+                    result.push((MutantInfo {
+                        source_name: mutant.source_name.clone(),
+                        file_name: mutant.file_name.clone(),
+                        target_line: mutant.target_line,
+                        mutation: mutant.mutation.clone(),
+                    }, TestResult::Timeout));
+                }
                 restore_source(&path, original_source_code);
                 continue;
             }
@@ -90,6 +95,7 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantIn
             }, TestResult::Killed));
         }
         restore_source(&path, original_source_code);
+        // remove_file(mutant.file_name.clone());
     }
     // println!("{:?}", result);
     return result;
@@ -164,8 +170,11 @@ pub fn check_survive(mut_test_result: &Vec<(String, bool)>, origin_test_result: 
  * Do 'cargo test' with the given list of tests.
  * Do all available tests whenever None is given.
  * Return list of the test results
+ * Return Err code if failed
+ * 0 : Compile Err
+ * 1 : Timeout
  */ 
-pub fn run_mut_test(path: &String, tests: Option<Vec<String>>) -> Option<Vec<(String, bool)>> {
+pub fn run_mut_test(path: &String, tests: Option<Vec<String>>, option: bool) -> Result<Vec<(String, bool)>, u32> {
     // Get Absolute path
     let absolute_path = utils::get_abs_path(path);
 
@@ -178,21 +187,49 @@ pub fn run_mut_test(path: &String, tests: Option<Vec<String>>) -> Option<Vec<(St
     arg_vec.insert(0, String::from("test"));
     shell.args(arg_vec);
     shell.current_dir(absolute_path);
-    let output = match shell.output() {
-        Ok(v) => v,
-        Err(_) => panic!("Cargo Test Failed"),
-    };
-    if !output.status.success() {
-        if output.status.code().unwrap() != 101 {
+    let file = OpenOptions::new().write(true).truncate(true).create(true).open("_test_output").expect("File Not Found");
+    shell.stdout(file);
+    shell.stderr(std::process::Stdio::null());
+    let child = SharedChild::spawn(&mut shell).expect("Failed to Run Tests");
+    let child_arc = std::sync::Arc::new(child);
+    let child_arc_clone = child_arc.clone();
+    
+    let timer = timer::Timer::new();
+    let _guard = timer.schedule_with_delay(chrono::Duration::seconds(30), move || {
+        let _ = child_arc_clone.kill();
+    }); // Make the timeout(30s) for cargo test
+    let output;
+    if option {
+        drop(_guard);   // This is for original test, no timeout
+        output = child_arc.wait().unwrap();
+    } else { 
+        let wait = child_arc.wait();
+        if wait.is_ok(){
+            output = wait.unwrap();
+        } else {
+            return Err(1);
+        }
+        drop(_guard);
+    }
+
+    if !output.success() {
+        if output.code().is_none() {
+            return Err(1);
+        }
+        if output.code().unwrap() != 101 {
             // Compile failed
-            println!("{}", output.status);
-            return None;
+            println!("{}", output);
+            return Err(0);
         }
         // Test failed
     }
-    let output = String::from_utf8(output.stdout).unwrap();
+
+    let mut output = String::new();
+    let mut f = OpenOptions::new().read(true).open("_test_output").expect("File Not Found");
+    f.read_to_string(&mut output).expect("Failed to Read File");
     let parsed = parse_result(output).unwrap();
-    return Some(parsed);
+    let _ = remove_file("_test_output");
+    return Ok(parsed);
 }
 
 /**
@@ -219,7 +256,6 @@ pub fn parse_result(result: String) -> Option<Vec<(String, bool)>>{
                     result.push((String::from(vs[1]), false));
                 }
             }
-            
         }
     }
     result.sort_by(|a, b| b.0.cmp(&a.0));

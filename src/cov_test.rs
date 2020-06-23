@@ -20,6 +20,9 @@ pub fn run_test(path: String) -> Option<String> {
     // Get current working directory
     let current_working_dir = utils::get_cwd();
 
+    println!("{}", path);
+    println!("{}", current_working_dir);
+
     // Make a subprocess & Run 'cargo tarpaulin'
     println!("Install Tarpaulin");
     let _ = Command::new("cargo")
@@ -35,11 +38,9 @@ pub fn run_test(path: String) -> Option<String> {
         &current_working_dir,
     ]);
 
-    println!("{}", path);
-
     shell.current_dir(absolute_path);
     let output = shell.output(); // run cargo tarpaulin
-    println!("{:#?}", output);
+    // println!("{:#?}", output);
     let report_path = current_working_dir + "/tarpaulin-report.json";
 
     return Some(report_path);

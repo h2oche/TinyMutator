@@ -51,7 +51,6 @@ impl<'tcx> OptionCollector<'tcx> {
             spans: Vec::new(),
         }
     }
-
     // fn collect(&mut self, )
 }
 
@@ -130,61 +129,52 @@ pub fn collect_option_expr_position(target_file: String) -> Vec<String> {
  * Get smallest list of lines which is parsable with ast
 */
 pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (usize, usize) {
-    // println!("num line : {w}", num_line);
+    // println!("reached!");
+    // println!("num line : {}", num_line);
+    // println!("max line : {}", splitted_file.len());
+    // println!("reached2!");
     if num_line >= splitted_file.len() {
+        // println!("why?");
         return (0, splitted_file.len());
     }
-    for j in 1..cmp::max(splitted_file.len() - num_line + 1, num_line + 1) {
-        // length
-        for i in 0..j {
+    // for j in 1..cmp::max(splitted_file.len() - num_line + 1, num_line + 1) {
+    for j in 1..10 {
+        for i in 0..j { // j is number of lines
             if (num_line as i32) + (i as i32) - (j as i32) < 0
                 || (num_line as i32) + (i as i32) > (splitted_file.len() as i32)
             {
                 continue;
             }
             // println!("{} {}", num_line + i - j, num_line + i);
-            // println!("\n\n\n\n\n{:?}\n\n\n\n\n", &splitted_file[(num_line + i - j)..(num_line + i)].join("\r\n"));
+            // println!("\n\n\n\n\n{:?}\n\n\n\n\n", &splitted_file[(num_line + i - j)..(num_line + i)].join("\n"));
             match syn::parse_str::<Stmt>(
-                &(splitted_file[(num_line + i - j)..(num_line + i)].join("\r\n")),
+                &(splitted_file[(num_line + i - j)..(num_line + i)].join("\n")),
             ) {
                 Ok(stmt) => {
+                    // println!("parsable!");
+                    // println!("{} {}", num_line + i - j, num_line + i);
                     return (num_line + i - j, num_line + i);
                 }
                 Err(error) => {}
             }
         }
     }
-    return (0, splitted_file.len());
+    return (0, 0); // not parsable within 10 lines
 }
 
-/**
- * Modify specific line of given file
-*/
-pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
-    // println!("filename : {}", file);
-    // println!("line : {}", num_line);
-    let mut constants = vec!["0", "1", "-1"];
+pub fn get_constants_and_void_functions(file: String) -> (Vec<String>, Vec<String>) {
+    let mut constants: Vec<String> = vec!["0".to_string(), "1".to_string(), "-1".to_string()];
     let mut void_functions: Vec<String> = Vec::new();
 
     let example_source = fs::read_to_string(file).expect("Something went wrong reading the file");
-    let ast = syn::parse_file(&example_source);
     let lines = example_source.split("\r\n");
     let mut lines_vec: Vec<_> = example_source.split("\r\n").collect();
 
-    // println!("{:?}", example_source);
-
     // preprocess(find all constants and void functions in file, ...)
     for i in 0..lines_vec.len() {
-        let expr2 = syn::parse_str::<Stmt>(&lines_vec[i]);
-        // println!("\n\n\n{:?}\n\n\n", expr2);
-        // println!("{:#?}", line);
         let (start, end) = find_min_parsable_lines(lines_vec.clone(), i + 1);
         let line_to_parse = lines_vec[start..end].join("\r\n");
         let expr = syn::parse_str::<Stmt>(&line_to_parse);
-        // println!("\n\n\n{}, {}", start, end);
-        // println!("{:?}", line_to_parse);
-        // println!("{:?}", expr);
-        // println!("{}\n\n\n", i);
         match expr {
             // statements are divided into 4 types(https://docs.rs/syn/1.0.30/syn/enum.Stmt.html)
             Ok(stmt) => {
@@ -198,61 +188,168 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 let mut const_expr: Vec<_> = lines_vec[i].split("=").collect();
                                 // println!("{:?}\n\n\n", const_expr);
                                 if const_expr.len() > 1 {
-                                    constants.push(const_expr[1].trim_end_matches(";").trim());
+                                    constants.push(const_expr[1].trim_end_matches(";").trim().to_string());
                                 }
-                            }
-                            syn::Item::Fn(itemFn) => {
-                                // get functions whose return type is not specified
+                            },
+                            syn::Item::Fn(itemFn) => { // get functions whose return type is not specified
                                 // println!("\n\n\n{:?}", itemFn);
-                                if itemFn.sig.output == syn::ReturnType::Default {
-                                    // void return type
+                                if itemFn.sig.output == syn::ReturnType::Default { // void return type
                                     // println!("\n\n\n{:?}", itemFn.sig.ident.to_string());
                                     void_functions.push(itemFn.sig.ident.to_string());
                                 }
-                            }
-                            _ => {}
+                            },
+                            _ => {},
                         }
                     }
-                    _ => {}
+                    _ => {},
                 }
             }
-            Err(error) => {}
+            Err(error) => {},
         }
     }
+    return (constants, void_functions)
+}
 
-    // println!("{:?}", constants);
-    // println!("{:?}", void_functions);
+/**
+ * Modify specific line of given file using string modification
+*/
+pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<String>, void_functions: Vec<String>) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
 
+    let example_source = fs::read_to_string(file).expect("Something went wrong reading the file");
+    let lines = example_source.split("\n");
+    let mut lines_vec: Vec<_> = example_source.split("\n").collect();
     let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
-    let line_to_parse = lines_vec[start..end].join("\r\n");
+    if (start, end) == (0, 0) { return result; }
+
+    let line_to_parse = lines_vec[start..end].join("\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
     // println!("\n\n\n{:?}\n\n\n", line_to_parse);
-    // println!("{:?}", expr_to_mutate);
     // println!{"{} {}", start, end};
+    // println!("{:?}", expr_to_mutate);
     match expr_to_mutate {
         Ok(stmt) => {
             // println!("{:#?}", stmt);
             match stmt {
-                syn::Stmt::Local(local) => {
-                    // let binding(negation, arithmetic operator deletion)
+                syn::Stmt::Local(local) => { // let binding(negation, arithmetic operator deletion)
                     let mut let_binding_expr: Vec<_> = line_to_parse.split("=").collect();
-                    let mut random_number = rand::thread_rng();
-                    // println!("Integer: {}", random_number.gen_range(0, 2));
-                    match random_number.gen_range(0, 2) {
-                        0 => {
-                            // negation
-                            let let_binding_string = let_binding_expr[0].to_string()
-                                + &("= ".to_string())
-                                + &("-(".to_string())
-                                + let_binding_expr[1].trim().trim_end_matches(";")
-                                + &(");".to_string());
-                            for i in start..end {
-                                lines_vec.remove(start);
-                            }
-                            lines_vec.insert(start, &let_binding_string);
-                            return String::from("negation:") + &lines_vec.join("\r\n");
+
+                    // negation
+                    let let_binding_string = let_binding_expr[0].to_string()
+                        + &("= ".to_string())
+                        + &("-(".to_string())
+                        + let_binding_expr[1].trim().trim_end_matches(";")
+                        + &(");".to_string());
+
+                    let mut result_lines_vec = lines_vec.clone();
+                    for i in start..end {
+                        result_lines_vec.remove(start);
+                    }
+                    result_lines_vec.insert(start, &let_binding_string);
+                    result.push(String::from("negation:") + &result_lines_vec.join("\n"));
+
+                    // arithmetic operator deletion
+                    let arithmetic_operators = vec![
+                        "+".to_string(),
+                        "-".to_string(),
+                        "*".to_string(),
+                        "/".to_string(),
+                        "%".to_string(),
+                    ];
+                    let mut arithmetic_indices = Vec::new();
+                    for (i, c) in lines_vec[start..end].join("\n").chars().enumerate() {
+                        if arithmetic_operators.contains(&&c.to_string()) {
+                            arithmetic_indices.push(i);
                         }
-                        1 => {
+                    }
+                    for index in arithmetic_indices {
+                        let tmp = lines_vec[start..end].join("\n")[..(index as usize)]
+                        .trim_end()
+                        .to_string()
+                        + &(";".to_string());
+
+                        let mut result_lines_vec = lines_vec.clone();
+                        for i in start..end {
+                            result_lines_vec.remove(start);
+                        }
+                        result_lines_vec.insert(start, &tmp);
+                        result_lines_vec.insert(start, &let_binding_string);
+                        result.push(String::from("arithmetic_operator_deletion:") + &result_lines_vec.join("\n"));
+                    }
+                }
+                syn::Stmt::Item(item) => {
+                    // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
+                    match item {
+                        syn::Item::Const(item_const) => {
+                            // constant replacement
+                            for new_constant in constants {
+                                let mut const_expr: Vec<_> = line_to_parse.split("=").collect();
+                                if const_expr[1].trim_end_matches(";").trim() == new_constant {
+                                    continue;
+                                }
+                                let tmp = const_expr[0].to_string();
+                                let const_string =
+                                    tmp + &("= ".to_string()) + &new_constant + &(";".to_string());
+                                let mut result_lines_vec = lines_vec.clone();
+                                for i in start..end {
+                                    result_lines_vec.remove(start);
+                                }
+                                result_lines_vec.insert(start, &const_string);
+                                result.push(String::from("constant_replacement:") + &result_lines_vec.join("\n"));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                syn::Stmt::Semi(expr, semi) => {
+                    match expr {
+                        syn::Expr::Call(expr_call) => {
+                            // println!("{:?}", *(expr_call.func));
+                            match *(expr_call.func) {
+                                syn::Expr::Path(expr_path) => {
+                                    // if void_functions
+                                    //     .contains(&expr_path.path.segments[0].ident.to_string())
+                                    // {
+                                    let leading_spaces =
+                                        line_to_parse.len() - line_to_parse.trim_start().len();
+                                    // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
+                                    let void_method_call_string = " ".repeat(leading_spaces)
+                                        + &("// ".to_string())
+                                        + line_to_parse.trim_start();
+                                    let mut result_lines_vec = lines_vec.clone();
+                                    for i in start..end {
+                                        result_lines_vec.remove(start);
+                                    }
+                                    result_lines_vec.insert(start, &void_method_call_string);
+                                    result.push(String::from("void_method_call:") + &result_lines_vec.join("\n"));
+                                    // }
+                                }
+                                _ => {}
+                            }
+                        }
+                        syn::Expr::Return(expr_return) => {
+                            let mut return_expr = line_to_parse
+                                .trim_start()
+                                .trim_start_matches("return")
+                                .trim()
+                                .trim_end_matches(";");
+                            let leading_spaces =
+                                line_to_parse.len() - line_to_parse.trim_start().len();
+
+                            // negation
+                            let return_string = " ".repeat(leading_spaces)
+                                + &("return ".to_string())
+                                + &("-(".to_string())
+                                + return_expr
+                                + &(");".to_string());
+                            // println!("{:?}", return_string);
+                            let mut result_lines_vec = lines_vec.clone();
+                            for i in start..end {
+                                result_lines_vec.remove(start);
+                            }
+                            result_lines_vec.insert(start, &return_string);
+                            result.push(String::from("negation:") + &result_lines_vec.join("\n"));
+
                             // arithmetic operator deletion
                             let arithmetic_operators = vec![
                                 "+".to_string(),
@@ -262,162 +359,35 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                                 "%".to_string(),
                             ];
                             let mut arithmetic_indices = Vec::new();
-                            for (i, c) in lines_vec[start..end].join("\r\n").chars().enumerate() {
+                            for (i, c) in lines_vec[start..end].join("\n").chars().enumerate() {
                                 if arithmetic_operators.contains(&&c.to_string()) {
                                     arithmetic_indices.push(i);
                                 }
                             }
-                            if arithmetic_indices.len() == 0 {
-                                return String::from("notmutated:") + &lines_vec.join("\r\n");
-                            }
-                            let index =
-                                *arithmetic_indices.choose(&mut rand::thread_rng()).unwrap();
-                            let tmp = lines_vec[start..end].join("\r\n")[..(index as usize)]
+                            for index in arithmetic_indices {
+                                let tmp = lines_vec[start..end].join("\n")
+                                [..(index as usize)]
                                 .trim_end()
                                 .to_string()
                                 + &(";".to_string());
-                            for i in start..end {
-                                lines_vec.remove(start);
+
+                                let mut result_lines_vec = lines_vec.clone();
+                                for i in start..end {
+                                    result_lines_vec.remove(start);
+                                }
+                                result_lines_vec.insert(start, &tmp);
+                                result.push(String::from("arithmetic_operator_deletion:") + &result_lines_vec.join("\n"));
                             }
-                            lines_vec.insert(start, &tmp);
-                            return String::from("arithmetic_deletion:") + &lines_vec.join("\r\n");
-                        }
-                        _ => {}
-                    }
-                }
-                syn::Stmt::Item(item) => {
-                    // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
-                    match item {
-                        syn::Item::Const(item_const) => {
-                            // constant replacement
-                            let mut new_constant_vec: Vec<_> = constants
-                                .choose_multiple(&mut rand::thread_rng(), 1)
-                                .collect();
-                            let mut new_constant = new_constant_vec[0];
-                            let mut const_expr: Vec<_> = line_to_parse.split("=").collect();
-                            while const_expr[1].trim_end_matches(";").trim() == *new_constant {
-                                new_constant_vec = constants
-                                    .choose_multiple(&mut rand::thread_rng(), 1)
-                                    .collect();
-                                new_constant = new_constant_vec[0];
-                            }
-                            let tmp = const_expr[0].to_string();
-                            let const_string =
-                                tmp + &("= ".to_string()) + new_constant + &(";".to_string());
-                            for i in start..end {
-                                lines_vec.remove(start);
-                            }
-                            lines_vec.insert(start, &const_string);
-                            return String::from("constant_replacement:") + &lines_vec.join("\r\n");
                         }
                         _ => {}
                     }
                 }
                 syn::Stmt::Expr(expr) => (),
-                syn::Stmt::Semi(expr, semi) => {
-                    match expr {
-                        syn::Expr::Call(expr_call) => {
-                            // println!("{:?}", *(expr_call.func));
-                            match *(expr_call.func) {
-                                syn::Expr::Path(expr_path) => {
-                                    // println!("Wow~~~");
-                                    // println!("{:?}", void_functions);
-                                    // println!("Wow~~~");
-                                    if void_functions
-                                        .contains(&expr_path.path.segments[0].ident.to_string())
-                                    {
-                                        let leading_spaces =
-                                            line_to_parse.len() - line_to_parse.trim_start().len();
-                                        // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
-                                        let void_method_call_string = " ".repeat(leading_spaces)
-                                            + &("// ".to_string())
-                                            + line_to_parse.trim_start();
-                                        for i in start..end {
-                                            lines_vec.remove(start);
-                                        }
-                                        lines_vec.insert(start, &void_method_call_string);
-                                        return String::from("call_:") + &lines_vec.join("\r\n");
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                        syn::Expr::Return(expr_return) => {
-                            // println!{"reached!"};
-                            let mut return_expr = line_to_parse
-                                .trim_start()
-                                .trim_start_matches("return")
-                                .trim()
-                                .trim_end_matches(";");
-                            // println!("return expression : {:?}", line_to_parse.trim_start());
-                            // println!("return expression : {:?}", return_expr);
-                            let leading_spaces =
-                                line_to_parse.len() - line_to_parse.trim_start().len();
-                            let mut random_number = rand::thread_rng();
-                            // println!("Integer: {}", random_number.gen_range(0, 2));
-                            match random_number.gen_range(0, 2) {
-                                0 => {
-                                    // negation
-                                    let return_string = " ".repeat(leading_spaces)
-                                        + &("return ".to_string())
-                                        + &("-(".to_string())
-                                        + return_expr
-                                        + &(");".to_string());
-                                    // println!("{:?}", return_string);
-                                    for i in start..end {
-                                        lines_vec.remove(start);
-                                    }
-                                    lines_vec.insert(start, &return_string);
-                                    return String::from("return1:") + &lines_vec.join("\r\n");
-                                }
-                                1 => {
-                                    // arithmetic operator deletion
-                                    let arithmetic_operators = vec![
-                                        "+".to_string(),
-                                        "-".to_string(),
-                                        "*".to_string(),
-                                        "/".to_string(),
-                                        "%".to_string(),
-                                    ];
-                                    let mut arithmetic_indices = Vec::new();
-                                    for (i, c) in
-                                        lines_vec[start..end].join("\r\n").chars().enumerate()
-                                    {
-                                        if arithmetic_operators.contains(&&c.to_string()) {
-                                            arithmetic_indices.push(i);
-                                        }
-                                    }
-                                    if arithmetic_indices.len() == 0 {
-                                        return String::from("notmutated:")
-                                            + &lines_vec.join("\r\n");
-                                    }
-                                    let index = *arithmetic_indices
-                                        .choose(&mut rand::thread_rng())
-                                        .unwrap();
-                                    let tmp = lines_vec[start..end].join("\r\n")
-                                        [..(index as usize)]
-                                        .trim_end()
-                                        .to_string()
-                                        + &(";".to_string());
-                                    for i in start..end {
-                                        lines_vec.remove(start);
-                                    }
-                                    lines_vec.insert(start, &tmp);
-                                    return String::from("return2:") + &lines_vec.join("\r\n");
-                                }
-                                _ => {}
-                            }
-                        }
-                        _ => {}
-                    }
-                }
             }
         }
-        Err(error) => {
-            // println!("{}", error);
-        }
+        Err(error) => { }
     }
-    return String::from("notmutated:") + &lines_vec.join("\r\n"); // temporary return value
+    return result;
 }
 
 pub struct Pos {
@@ -511,74 +481,74 @@ impl<'ast> VisitMut for BinOpVisitor {
                 let type_str = match node {
                     // Arithmetic Operators
                     syn::BinOp::Add(_add) => {
-                        _muttype = String::from("arithmetic");
+                        _muttype = String::from("arithmetic_operator_replacement");
                         arith.remove(0);
                         arith
                     }
                     syn::BinOp::Sub(_sub) => {
-                        _muttype = String::from("arithmetic");
+                        _muttype = String::from("arithmetic_operator_replacement");
                         arith.remove(1);
                         arith
                     }
                     syn::BinOp::Mul(_star) => {
-                        _muttype = String::from("arithmetic");
+                        _muttype = String::from("arithmetic_operator_replacement");
                         arith.remove(2);
                         arith
                     }
                     syn::BinOp::Div(_div) => {
-                        _muttype = String::from("arithmetic");
+                        _muttype = String::from("arithmetic_operator_replacement");
                         arith.remove(3);
                         arith
                     }
                     syn::BinOp::Rem(_rem) => {
-                        _muttype = String::from("arithmetic");
+                        _muttype = String::from("arithmetic_operator_replacement");
                         arith.remove(4);
                         arith
                     }
                     // Bitwise Operators
                     syn::BinOp::BitXor(_caret) => {
-                        _muttype = String::from("bitwise");
+                        _muttype = String::from("bitwise_operator_replacement");
                         bit.remove(0);
                         bit
                     }
                     syn::BinOp::BitAnd(_and) => {
-                        _muttype = String::from("bitwise");
+                        _muttype = String::from("bitwise_operator_replacement");
                         bit.remove(1);
                         bit
                     }
                     syn::BinOp::BitOr(_or) => {
-                        _muttype = String::from("bitwise");
+                        _muttype = String::from("bitwise_operator_replacement");
                         bit.remove(2);
                         bit
                     }
                     // Relational Operators
                     syn::BinOp::Eq(_eqeq) => {
-                        _muttype = String::from("relational");
+                        _muttype = String::from("relational_operator_replacement");
                         relational.remove(0);
                         relational
                     }
                     syn::BinOp::Lt(_lt) => {
-                        _muttype = String::from("relational");
+                        _muttype = String::from("relational_operator_replacement");
                         relational.remove(1);
                         relational
                     }
                     syn::BinOp::Le(_le) => {
-                        _muttype = String::from("relational");
+                        _muttype = String::from("relational_operator_replacement");
                         relational.remove(2);
                         relational
                     }
                     syn::BinOp::Ne(_ne) => {
-                        _muttype = String::from("relational");
+                        _muttype = String::from("relational_operator_replacement");
                         relational.remove(3);
                         relational
                     }
                     syn::BinOp::Ge(_ge) => {
-                        _muttype = String::from("relational");
+                        _muttype = String::from("relational_operator_replacement");
                         relational.remove(4);
                         relational
                     }
                     syn::BinOp::Gt(_gt) => {
-                        _muttype = String::from("relational");
+                        _muttype = String::from("relational_operator_replacement");
                         relational.remove(5);
                         relational
                     }
@@ -750,68 +720,28 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             }
         }
         let woo = idx;
-        let mut mutants_by_string: Vec<String> = Vec::new();
-        for _n in 0..20 {
-            let mutated_result1: String =
-                mutate_file_by_line(file.clone(), num_line.clone()).clone();
-            let mutated_result: Vec<&str> = mutated_result1.splitn(2, ":").collect();
+
+        let constants = get_constants_and_void_functions(file.clone()).0;
+        let void_functions = get_constants_and_void_functions(file.clone()).1;
+
+        let mutated_files_with_muttype: Vec<String> = mutate_file_by_string(file.clone(), num_line.clone(), constants.clone(), void_functions.clone()).clone();
+        for mutated_file_with_muttype in mutated_files_with_muttype {
+            let mutated_result: Vec<&str> = mutated_file_with_muttype.splitn(2,":").collect();
             let mutated_file = mutated_result[1].clone();
             let _muttype = mutated_result[0].to_string().clone();
-
-            if _muttype == "notmutated" {
-                continue;
-            } // not mutated
-            match mutants_by_string.iter().position(|r| r == mutated_file) {
-                Some(index) => {
-                    continue;
-                } // already existing mutant
-                None => {
-                    // println!("New mutant!");
-                    mutants_by_string.push(mutated_file.to_string());
-                }
-            }
-            let mut fz = fs::File::create(format!(
-                "{}{}{}{}{}{}",
-                using.to_string().clone(),
-                "_",
-                num_line,
-                "_",
-                idx,
-                ".rs"
-            ))
-            .unwrap();
+    
+            let mut fz = fs::File::create(format!("{}{}{}{}{}{}", using.to_string().clone(), "_", num_line, "_", idx, ".rs")).unwrap();
             fz.write_all(mutated_file.as_bytes());
             Command::new("rustfmt")
-                .arg(format!(
-                    "{}{}{}{}{}{}",
-                    using.to_string().clone(),
-                    "_",
-                    num_line,
-                    "_",
-                    idx,
-                    ".rs"
-                ))
-                .spawn()
-                .expect("rustfmt command failed to start");
-
-            ret.push(MutantInfo {
-                source_name: using.to_string().clone(),
-                file_name: format!(
-                    "{}{}{}{}{}{}",
-                    using.to_string().clone(),
-                    "_",
-                    num_line,
-                    "_",
-                    idx,
-                    ".rs"
-                ),
-                target_line: *num_line,
-                mutation: _muttype.clone(),
-            });
+                        .arg(format!("{}{}{}{}{}{}", using.to_string().clone(), "_", num_line, "_", idx, ".rs"))
+                        .spawn()
+                        .expect("rustfmt command failed to start");
+            
+            ret.push(MutantInfo{source_name : using.to_string().clone(), file_name : format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), target_line : *num_line, mutation : _muttype.clone()});
             idx += 1;
+            println!("{}, {}, {}, {}", using.to_string().clone(), format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), *num_line, _muttype.clone());
         }
 
-        // println!("{:?}", mutants_by_string);
         println!(
             "For debug : using AST = {} mutants, using String = {} mutants",
             woo,
@@ -843,7 +773,10 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             )
             .unwrap();
         }
-        let captures = SPAN_EXTRACT_RE.captures(&op_pos).unwrap();
+        let captures = match SPAN_EXTRACT_RE.captures(&op_pos) {
+            Some(v) => v,
+            None => continue,
+        };
         let start_line = captures["start_line"].parse::<usize>().unwrap() - 1;
         let start_col = captures["start_col"].parse::<usize>().unwrap() - 1;
         let end_line = captures["end_line"].parse::<usize>().unwrap() - 1;

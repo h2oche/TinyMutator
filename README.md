@@ -1,4 +1,4 @@
-# cs453-project
+# TinyMutator
 
 This project use nightly feature(rustc_private).
 
@@ -28,9 +28,23 @@ This project use nightly feature(rustc_private).
     cargo tarpaulin --out Json --output-dir TARGET_PATH
     ```
   
-  - Download rustfmt and rustc-dev
+  - Download rustfmt, rustc-dev and llvm-tools-preview
 
     ```
     rustup component add rustfmt
     rustup component add rustc-dev
+    rustup component add llvm-tools-preview
+    ```
+  
+2. Run TinyMutator
+  - You can run TinyMutator with tarpaulin included.
+  
+    ```
+    cargo run [TARGET_PATH]
+    ```
+
+  - But it is recommended to run TinyMutator with coverage report.
+
+    ```
+    cargo run [TARGET_PATH] [COVERAGE_REPORT]
     ```
