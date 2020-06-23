@@ -34,6 +34,9 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                     TestResult::CompileError => {
                         table_by_file[index] = (table_by_file[index].0.clone(), table_by_file[index].1, table_by_file[index].2, table_by_file[index].3 + 1, table_by_file[index].4.clone());
                     },
+                    TestResult::Timeout => {
+                        table_by_file[index] = (table_by_file[index].0.clone(), table_by_file[index].1, table_by_file[index].2, table_by_file[index].3 + 1, table_by_file[index].4.clone());
+                    },
                 }
             }
             None => { // new filename
@@ -48,6 +51,10 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                     TestResult::CompileError => {
                         table_by_file.push((x.0.source_name.clone(), 0, 0, 1, "".to_string()));
                     },
+                    TestResult::Timeout => {
+                        table_by_file.push((x.0.source_name.clone(), 0, 0, 1, "".to_string()));
+                    },
+                    
                 }
             }
         }
@@ -63,6 +70,9 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                     TestResult::CompileError => {
                         table_by_type[index] = (table_by_type[index].0.clone(), table_by_type[index].1, table_by_type[index].2, table_by_type[index].3 + 1, table_by_type[index].4.clone());
                     },
+                    TestResult::Timeout => {
+                        table_by_type[index] = (table_by_type[index].0.clone(), table_by_type[index].1, table_by_type[index].2, table_by_type[index].3 + 1, table_by_type[index].4.clone());
+                    },
                 }    
             }
             None => { // new type of mutant
@@ -75,6 +85,9 @@ pub fn make_report(path: String, result: Vec<(MutantInfo, TestResult)>) -> Strin
                         table_by_type.push((x.0.mutation.clone(), 0, 1, 0, "".to_string()));
                     },
                     TestResult::CompileError => {
+                        table_by_type.push((x.0.mutation.clone(), 0, 0, 1, "".to_string()));
+                    },
+                    TestResult::Timeout => {
                         table_by_type.push((x.0.mutation.clone(), 0, 0, 1, "".to_string()));
                     },
                 }    

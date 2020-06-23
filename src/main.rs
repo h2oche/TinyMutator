@@ -17,6 +17,9 @@ extern crate rustc_span;
 extern crate rustc_ty;
 extern crate rustc_typeck;
 extern crate syn;
+extern crate timer;
+extern crate chrono;
+extern crate shared_child;
 
 mod cov_test;
 mod mut_gen;
@@ -67,14 +70,12 @@ fn main() {
         println!("Generating Mutants for {}, {:?}", path, line_list);
         mutated_result.append(&mut mut_gen::mutate(path.clone(), line_list.clone()));
     }
-    let after_mutate = SystemTime::now();
-    let mutation_time = after_mutate.elapsed().unwrap().as_secs() - before_mutate.elapsed().unwrap().as_secs();
+    let mutation_time = before_mutate.elapsed().unwrap().as_secs();
     println!("Time Elapsed for Generating Mutants : {}s", mutation_time);
 
     let before_mut_test = SystemTime::now();
     let result = mut_test::mut_test(args[1].clone(), mutated_result);
-    let after_mut_test = SystemTime::now();
-    let mutation_time = after_mut_test.elapsed().unwrap().as_secs() - before_mut_test.elapsed().unwrap().as_secs();
+    let mutation_time = before_mut_test.elapsed().unwrap().as_secs();
     println!("Time Elapsed for Testing Mutants : {}s", mutation_time);
     
     for _x in result.iter() {

@@ -849,7 +849,10 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             )
             .unwrap();
         }
-        let captures = SPAN_EXTRACT_RE.captures(&op_pos).unwrap();
+        let captures = match SPAN_EXTRACT_RE.captures(&op_pos) {
+            Some(v) => v,
+            None => continue,
+        };
         let start_line = captures["start_line"].parse::<usize>().unwrap() - 1;
         let start_col = captures["start_col"].parse::<usize>().unwrap() - 1;
         let end_line = captures["end_line"].parse::<usize>().unwrap() - 1;
