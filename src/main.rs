@@ -24,7 +24,6 @@ mod mut_test;
 mod report_gen;
 mod utils;
 use mut_gen::MutantInfo;
-use mut_test::TestResult;
 use std::env;
 use std::fs;
 use std::fs::File;
@@ -62,10 +61,10 @@ fn main() {
     for trace in trace_iter {
         let path = &trace.path;
         let line_list = &trace.traces;
-        //if path.contains("combinations"){
-        println!("Generating Mutants for {}, {:?}", path, line_list);
-        mutated_result.append(&mut mut_gen::mutate(path.clone(), line_list.clone()));
-        //}
+        if path.contains("combinations") {
+            println!("Generating Mutants for {}, {:?}", path, line_list);
+            mutated_result.append(&mut mut_gen::mutate(path.clone(), line_list.clone()));
+        }
         //if mutated_result.len() > 20 {
         //    break;
         //}

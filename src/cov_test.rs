@@ -34,9 +34,12 @@ pub fn run_test(path: String) -> Option<String> {
         "--output-dir",
         &current_working_dir,
     ]);
+
+    println!("{}", path);
+
     shell.current_dir(absolute_path);
     let output = shell.output(); // run cargo tarpaulin
-
+    println!("{:#?}", output);
     let report_path = current_working_dir + "/tarpaulin-report.json";
 
     return Some(report_path);

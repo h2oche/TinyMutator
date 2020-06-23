@@ -1,8 +1,7 @@
 use super::mut_gen::MutantInfo;
 use super::mut_test::TestResult;
 use std::{
-    fs::{File, OpenOptions},
-    convert::{TryFrom, TryInto},
+    fs::File,
     io::prelude::*,
 };
 // use typed_html::{

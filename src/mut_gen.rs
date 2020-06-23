@@ -8,12 +8,7 @@ use rustc_middle::hir::map::Map;
 use rustc_middle::ty::TyCtxt;
 use rustc_session::config::{self, CrateType};
 use rustc_span::{source_map, Span};
-use std::fs::File;
-use std::io::prelude::*;
-use std::path;
-use std::process;
-use std::str;
-use std::{cmp, env, fs, io::prelude::*, process::Command, vec};
+use std::{cmp, fs, fs::File, path, process, str, process::Command, vec, io::Write};
 use syn::{
     spanned::Spanned,
     visit_mut::{self, VisitMut},
@@ -416,7 +411,6 @@ pub fn mutate_file_by_line(file: String, num_line: usize) -> String {
                         _ => {}
                     }
                 }
-                _ => {}
             }
         }
         Err(error) => {
