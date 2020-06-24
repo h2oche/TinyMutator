@@ -694,7 +694,7 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     let syntax_tree_origin = syn::parse_file(&example_source).unwrap();
     //println!("{:#?}", syntax_tree);
-
+    let mut idx = 0;
     let num_line_iter = num_line.iter();
     for num_line in num_line_iter {
         let mut syntax_tree = syntax_tree_origin.clone();
@@ -714,7 +714,7 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         };
         _binopvisitor.visit_file_mut(&mut syntax_tree);
         _binopvisitor.search = false;
-        let mut idx = 0;
+        
         let mut cutted = file.clone().to_string();
         let mut using = &cutted[0..cutted.len() - 3];
         for _n in 0.._binopvisitor.vec_pos.len() {
