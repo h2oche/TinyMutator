@@ -693,7 +693,6 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
     let example_source =
         fs::read_to_string(&file.clone()).expect("Something went wrong reading the file");
     let syntax_tree_origin = syn::parse_file(&example_source).unwrap();
-    //println!("{:#?}", syntax_tree);
     let mut idx = 0;
     let num_line_iter = num_line.iter();
     for num_line in num_line_iter {
