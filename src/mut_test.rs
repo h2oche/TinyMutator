@@ -243,14 +243,16 @@ pub fn parse_result(result: String) -> Option<Vec<(String, bool)>>{
         if !s.contains("test result:") && !s.contains("running") && s.contains("test") {
             if s.contains("(line") {
                 let vs : Vec<&str> = s.split(" ").collect();
-                if vs[7].contains("ok") {
-                    result.push((String::from(vs[3]), true));
+                let final_index = vs.len() - 1;
+                if vs[final_index].contains("ok") {
+                    result.push((String::from(vs[final_index - 2]), true));
                 } else {
-                    result.push((String::from(vs[3]), false));
+                    result.push((String::from(vs[final_index - 2]), false));
                 }
             } else {
                 let vs : Vec<&str> = s.split(" ").collect();
-                if vs[3].contains("ok") {
+                let final_index = vs.len() - 1;
+                if vs[final_index].contains("ok") {
                     result.push((String::from(vs[1]), true));
                 } else {
                     result.push((String::from(vs[1]), false));
