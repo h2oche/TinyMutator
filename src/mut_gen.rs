@@ -950,7 +950,7 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             source_name: using.to_owned().clone(),
             file_name: mutated_path.clone(),
             target_line: start_line,
-            mutation: "OptionToNone".to_owned(),
+            mutation: "option_to_none".to_owned(),
         });
 
         // println!(
@@ -959,7 +959,7 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         //         source_name: using.to_owned().clone(),
         //         file_name: mutated_path.clone(),
         //         target_line: start_line,
-        //         mutation: "OptionToNone".to_owned(),
+        //         mutation: "option_to_none".to_owned(),
         //     }
         // );
 
