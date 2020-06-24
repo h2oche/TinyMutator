@@ -869,13 +869,13 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         .collect::<Vec<_>>();
     let mut option_idx = 0;
 
-    // println!("OPTIONS");
+    // println!("OPTIONS\n {:?}", option_positions);
 
     for op_pos in option_positions {
         // parse op_pos
         lazy_static! {
             static ref SPAN_EXTRACT_RE: Regex = Regex::new(
-                r"^<.+>:(?P<start_line>\d+):(?P<start_col>\d+): (?P<end_line>\d+):(?P<end_col>\d+)$"
+                r"^<.+>:(?P<start_line>\d+):(?P<start_col>\d+): (?P<end_line>\d+):(?P<end_col>\d+)"
             )
             .unwrap();
         }
