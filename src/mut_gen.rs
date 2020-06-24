@@ -867,7 +867,7 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         .lines()
         .map(|line| line.to_owned())
         .collect::<Vec<_>>();
-    let mut option_idx = 0;
+    let mut option_idx = idx;
 
     // println!("OPTIONS\n {:?}", option_positions);
 
