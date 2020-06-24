@@ -245,9 +245,9 @@ pub fn parse_result(result: String) -> Option<Vec<(String, bool)>>{
                 let vs : Vec<&str> = s.split(" ").collect();
                 let final_index = vs.len() - 1;
                 if vs[final_index].contains("ok") {
-                    result.push((String::from(vs[3]), true));
+                    result.push((String::from(vs[final_index - 2]), true));
                 } else {
-                    result.push((String::from(vs[3]), false));
+                    result.push((String::from(vs[final_index - 2]), false));
                 }
             } else {
                 let vs : Vec<&str> = s.split(" ").collect();
