@@ -1,5 +1,3 @@
-//use std::io;
-//pub mod mut_gen;
 use super::utils;
 use super::mut_gen::MutantInfo;
 use std::process::Command;
@@ -8,7 +6,6 @@ use std::fs::{remove_file, OpenOptions};
 use std::io::prelude::*;
 use std::fmt;
 use shared_child::SharedChild;
-//use mut_gen::MutantInfo;
 
 #[derive(Debug)]
 pub enum TestResult {
@@ -95,9 +92,7 @@ pub fn mut_test(path: String, list_of_mutants: Vec<MutantInfo>) -> Vec<(MutantIn
             }, TestResult::Killed));
         }
         restore_source(&path, original_source_code);
-        // remove_file(mutant.file_name.clone());
     }
-    // println!("{:?}", result);
     return result;
 }
 
@@ -137,7 +132,6 @@ fn restore_source(path: &String, original_source_code: (String, String)) {
 
     // Open original file and Write original source code.
     let mut f = OpenOptions::new().write(true).truncate(true).read(true).open(file_name).expect("File Not Found");
-    //println!("{}", source_code);
     f.write(source_code.as_bytes()).expect("Failed to Write File");
     return;
 }
@@ -149,16 +143,13 @@ fn restore_source(path: &String, original_source_code: (String, String)) {
 pub fn check_survive(mut_test_result: &Vec<(String, bool)>, origin_test_result: &Vec<(String, bool)>) -> bool {
     // @TODO: This function is not tested(May have some bugs)
     if mut_test_result.len() != origin_test_result.len(){
-        //println!("length differ");
         return false;
     }
     for i in 0..mut_test_result.len(){
         if mut_test_result[i].0 != origin_test_result[i].0 {
-            //println!("String differ {}", i);
             return false;
         }
         if mut_test_result[i].1 != origin_test_result[i].1 {
-            //println!("Result differ {}", i);
             return false;
         } 
     }

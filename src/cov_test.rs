@@ -40,7 +40,6 @@ pub fn run_test(path: String) -> Option<String> {
 
     shell.current_dir(absolute_path);
     let output = shell.output(); // run cargo tarpaulin
-    // println!("{:#?}", output);
     let report_path = current_working_dir + "/tarpaulin-report.json";
 
     return Some(report_path);
@@ -74,7 +73,6 @@ pub struct TarpaulinTrace {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TarpaulinFileLog {
     path: Vec<String>,
-    // content: String,
     traces: Vec<TarpaulinTrace>,
 }
 
