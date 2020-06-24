@@ -158,12 +158,7 @@ pub fn collect_option_expr_position(target_file: String) -> Vec<String> {
  * Get smallest list of lines which is parsable with ast
 */
 pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (usize, usize) {
-    // println!("reached!");
-    // println!("num line : {}", num_line);
-    // println!("max line : {}", splitted_file.len());
-    // println!("reached2!");
     if num_line >= splitted_file.len() {
-        // println!("why?");
         return (0, splitted_file.len());
     }
     // for j in 1..cmp::max(splitted_file.len() - num_line + 1, num_line + 1) {
@@ -175,14 +170,10 @@ pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (us
             {
                 continue;
             }
-            // println!("{} {}", num_line + i - j, num_line + i);
-            // println!("\n\n\n\n\n{:?}\n\n\n\n\n", &splitted_file[(num_line + i - j)..(num_line + i)].join("\n"));
             match syn::parse_str::<Stmt>(
                 &(splitted_file[(num_line + i - j)..(num_line + i)].join("\n")),
             ) {
                 Ok(stmt) => {
-                    // println!("parsable!");
-                    // println!("{} {}", num_line + i - j, num_line + i);
                     return (num_line + i - j, num_line + i);
                 }
                 Err(error) => {}
@@ -213,10 +204,7 @@ pub fn get_constants_and_void_functions(file: String) -> (Vec<String>, Vec<Strin
                         // constant statement, use statement, ...(listed here : https://docs.rs/syn/1.0.30/syn/enum.Item.html)
                         match item {
                             syn::Item::Const(item_const) => {
-                                // println!("{}", line);
-                                // println!("{:#?}", &item_const);
                                 let mut const_expr: Vec<_> = lines_vec[i].split("=").collect();
-                                // println!("{:?}\n\n\n", const_expr);
                                 if const_expr.len() > 1 {
                                     constants.push(
                                         const_expr[1].trim_end_matches(";").trim().to_string(),
@@ -225,10 +213,8 @@ pub fn get_constants_and_void_functions(file: String) -> (Vec<String>, Vec<Strin
                             }
                             syn::Item::Fn(itemFn) => {
                                 // get functions whose return type is not specified
-                                // println!("\n\n\n{:?}", itemFn);
                                 if itemFn.sig.output == syn::ReturnType::Default {
                                     // void return type
-                                    // println!("\n\n\n{:?}", itemFn.sig.ident.to_string());
                                     void_functions.push(itemFn.sig.ident.to_string());
                                 }
                             }
@@ -265,9 +251,6 @@ pub fn mutate_file_by_string(
 
     let line_to_parse = lines_vec[start..end].join("\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
-    // println!("\n\n\n{:?}\n\n\n", line_to_parse);
-    // println!{"{} {}", start, end};
-    // println!("{:?}", expr_to_mutate);
     match expr_to_mutate {
         Ok(stmt) => {
             // println!("{:#?}", stmt);
@@ -352,27 +335,26 @@ pub fn mutate_file_by_string(
                 syn::Stmt::Semi(expr, semi) => {
                     match expr {
                         syn::Expr::Call(expr_call) => {
-                            // println!("{:?}", *(expr_call.func));
                             match *(expr_call.func) {
                                 syn::Expr::Path(expr_path) => {
                                     // if void_functions
                                     //     .contains(&expr_path.path.segments[0].ident.to_string())
                                     // {
-                                    let leading_spaces =
-                                        line_to_parse.len() - line_to_parse.trim_start().len();
-                                    // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
-                                    let void_method_call_string = " ".repeat(leading_spaces)
-                                        + &("// ".to_string())
-                                        + line_to_parse.trim_start();
-                                    let mut result_lines_vec = lines_vec.clone();
-                                    for i in start..end {
-                                        result_lines_vec.remove(start);
-                                    }
-                                    result_lines_vec.insert(start, &void_method_call_string);
-                                    result.push(
-                                        String::from("void_method_call:")
-                                            + &result_lines_vec.join("\n"),
-                                    );
+                                        let leading_spaces =
+                                            line_to_parse.len() - line_to_parse.trim_start().len();
+                                        // println!("{}", " ".repeat(line_to_parse.len() - line_to_parse.trim_start().len()) + &("// ".to_string()) + line_to_parse.trim_start());
+                                        let void_method_call_string = " ".repeat(leading_spaces)
+                                            + &("// ".to_string())
+                                            + line_to_parse.trim_start();
+                                        let mut result_lines_vec = lines_vec.clone();
+                                        for i in start..end {
+                                            result_lines_vec.remove(start);
+                                        }
+                                        result_lines_vec.insert(start, &void_method_call_string);
+                                        result.push(
+                                            String::from("void_method_call:")
+                                                + &result_lines_vec.join("\n"),
+                                        );
                                     // }
                                 }
                                 _ => {}
