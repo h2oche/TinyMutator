@@ -8,7 +8,7 @@ use rustc_middle::hir::map::Map;
 use rustc_middle::ty::TyCtxt;
 use rustc_session::config::{self, CrateType};
 use rustc_span::{source_map, Span};
-use std::{cmp, fs, fs::File, path, process, str, process::Command, vec, io::Write};
+use std::{cmp, fs, fs::File, io::Write, path, process, process::Command, str, vec};
 use syn::{
     spanned::Spanned,
     visit_mut::{self, VisitMut},
@@ -26,21 +26,50 @@ impl<'tcx> Visitor<'tcx> for OptionCollector<'tcx> {
     }
     fn visit_expr(&mut self, expr: &'tcx HirExpr) {
         let table = self.tcx.typeck_tables_of(expr.hir_id.owner);
-        let ty = table.expr_ty(expr);
-        let ty_str = ty.to_string();
-        let span = expr.span;
-        // check if ty is std::option::Option<T>
-        lazy_static! {
-            static ref OPTION_TYPE_RE: Regex = Regex::new(r"^std::option::Option<.+>$").unwrap();
+
+        if let Some(ty) = table.expr_ty_opt(expr) {
+            let ty_str = ty.to_string();
+            let span = expr.span;
+            // check if ty is std::option::Option<T>
+            lazy_static! {
+                static ref OPTION_TYPE_RE: Regex =
+                    Regex::new(r"^std::option::Option<.+>$").unwrap();
+            }
+            if OPTION_TYPE_RE.is_match(&ty_str) {
+                println!("***********************************");
+                println!("Span : {:#?}, Type: {}", span, ty_str);
+                println!("***********************************");
+                self.spans.push(span);
+            }
+            // println!("{:#?}", expr);
+            intravisit::walk_expr(self, expr);
         }
-        if OPTION_TYPE_RE.is_match(&ty_str) {
-            // println!("***********************************");
-            // println!("Span : {:#?}, Type: {}", span, ty_str);
-            // println!("***********************************");
-            self.spans.push(span);
-        }
-        // println!("{:#?}", expr);
-        intravisit::walk_expr(self, expr);
+
+        // match table.tainted_by_errors {
+        //     Some(err) => {
+        //         println!("ERROR");
+        //         println!("{:#?}", err);
+        //         intravisit::walk_expr(self, expr);
+        //     }
+        //     None => {
+        //         let ty = table.expr_ty(expr);
+        //         let ty_str = ty.to_string();
+        //         let span = expr.span;
+        //         // check if ty is std::option::Option<T>
+        //         lazy_static! {
+        //             static ref OPTION_TYPE_RE: Regex =
+        //                 Regex::new(r"^std::option::Option<.+>$").unwrap();
+        //         }
+        //         if OPTION_TYPE_RE.is_match(&ty_str) {
+        //             println!("***********************************");
+        //             println!("Span : {:#?}, Type: {}", span, ty_str);
+        //             println!("***********************************");
+        //             self.spans.push(span);
+        //         }
+        //         // println!("{:#?}", expr);
+        //         intravisit::walk_expr(self, expr);
+        //     }
+        // }
     }
 }
 
@@ -76,7 +105,7 @@ pub fn collect_option_expr_position(target_file: String) -> Vec<String> {
         },
         input: config::Input::Str {
             // name: source_map::FileName::Custom("main.rs".to_string()),
-            name: source_map::FileName::Custom("lib.rs".to_owned()),
+            name: source_map::FileName::Custom(target_file.clone()),
             input: source_code.to_owned(),
         },
         diagnostic_output: rustc_session::DiagnosticOutput::Default,
@@ -139,7 +168,8 @@ pub fn find_min_parsable_lines(splitted_file: Vec<&str>, num_line: usize) -> (us
     }
     // for j in 1..cmp::max(splitted_file.len() - num_line + 1, num_line + 1) {
     for j in 1..10 {
-        for i in 0..j { // j is number of lines
+        for i in 0..j {
+            // j is number of lines
             if (num_line as i32) + (i as i32) - (j as i32) < 0
                 || (num_line as i32) + (i as i32) > (splitted_file.len() as i32)
             {
@@ -188,39 +218,50 @@ pub fn get_constants_and_void_functions(file: String) -> (Vec<String>, Vec<Strin
                                 let mut const_expr: Vec<_> = lines_vec[i].split("=").collect();
                                 // println!("{:?}\n\n\n", const_expr);
                                 if const_expr.len() > 1 {
-                                    constants.push(const_expr[1].trim_end_matches(";").trim().to_string());
+                                    constants.push(
+                                        const_expr[1].trim_end_matches(";").trim().to_string(),
+                                    );
                                 }
-                            },
-                            syn::Item::Fn(itemFn) => { // get functions whose return type is not specified
+                            }
+                            syn::Item::Fn(itemFn) => {
+                                // get functions whose return type is not specified
                                 // println!("\n\n\n{:?}", itemFn);
-                                if itemFn.sig.output == syn::ReturnType::Default { // void return type
+                                if itemFn.sig.output == syn::ReturnType::Default {
+                                    // void return type
                                     // println!("\n\n\n{:?}", itemFn.sig.ident.to_string());
                                     void_functions.push(itemFn.sig.ident.to_string());
                                 }
-                            },
-                            _ => {},
+                            }
+                            _ => {}
                         }
                     }
-                    _ => {},
+                    _ => {}
                 }
             }
-            Err(error) => {},
+            Err(error) => {}
         }
     }
-    return (constants, void_functions)
+    return (constants, void_functions);
 }
 
 /**
  * Modify specific line of given file using string modification
 */
-pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<String>, void_functions: Vec<String>) -> Vec<String> {
+pub fn mutate_file_by_string(
+    file: String,
+    num_line: usize,
+    constants: Vec<String>,
+    void_functions: Vec<String>,
+) -> Vec<String> {
     let mut result: Vec<String> = Vec::new();
 
     let example_source = fs::read_to_string(file).expect("Something went wrong reading the file");
     let lines = example_source.split("\n");
     let mut lines_vec: Vec<_> = example_source.split("\n").collect();
     let (start, end) = find_min_parsable_lines(lines_vec.clone(), num_line);
-    if (start, end) == (0, 0) { return result; }
+    if (start, end) == (0, 0) {
+        return result;
+    }
 
     let line_to_parse = lines_vec[start..end].join("\n");
     let expr_to_mutate = syn::parse_str::<Stmt>(&line_to_parse);
@@ -231,7 +272,8 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
         Ok(stmt) => {
             // println!("{:#?}", stmt);
             match stmt {
-                syn::Stmt::Local(local) => { // let binding(negation, arithmetic operator deletion)
+                syn::Stmt::Local(local) => {
+                    // let binding(negation, arithmetic operator deletion)
                     let mut let_binding_expr: Vec<_> = line_to_parse.split("=").collect();
 
                     // negation
@@ -264,9 +306,9 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
                     }
                     for index in arithmetic_indices {
                         let tmp = lines_vec[start..end].join("\n")[..(index as usize)]
-                        .trim_end()
-                        .to_string()
-                        + &(";".to_string());
+                            .trim_end()
+                            .to_string()
+                            + &(";".to_string());
 
                         let mut result_lines_vec = lines_vec.clone();
                         for i in start..end {
@@ -274,7 +316,10 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
                         }
                         result_lines_vec.insert(start, &tmp);
                         result_lines_vec.insert(start, &let_binding_string);
-                        result.push(String::from("arithmetic_operator_deletion:") + &result_lines_vec.join("\n"));
+                        result.push(
+                            String::from("arithmetic_operator_deletion:")
+                                + &result_lines_vec.join("\n"),
+                        );
                     }
                 }
                 syn::Stmt::Item(item) => {
@@ -295,7 +340,10 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
                                     result_lines_vec.remove(start);
                                 }
                                 result_lines_vec.insert(start, &const_string);
-                                result.push(String::from("constant_replacement:") + &result_lines_vec.join("\n"));
+                                result.push(
+                                    String::from("constant_replacement:")
+                                        + &result_lines_vec.join("\n"),
+                                );
                             }
                         }
                         _ => {}
@@ -321,7 +369,10 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
                                         result_lines_vec.remove(start);
                                     }
                                     result_lines_vec.insert(start, &void_method_call_string);
-                                    result.push(String::from("void_method_call:") + &result_lines_vec.join("\n"));
+                                    result.push(
+                                        String::from("void_method_call:")
+                                            + &result_lines_vec.join("\n"),
+                                    );
                                     // }
                                 }
                                 _ => {}
@@ -365,18 +416,20 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
                                 }
                             }
                             for index in arithmetic_indices {
-                                let tmp = lines_vec[start..end].join("\n")
-                                [..(index as usize)]
-                                .trim_end()
-                                .to_string()
-                                + &(";".to_string());
+                                let tmp = lines_vec[start..end].join("\n")[..(index as usize)]
+                                    .trim_end()
+                                    .to_string()
+                                    + &(";".to_string());
 
                                 let mut result_lines_vec = lines_vec.clone();
                                 for i in start..end {
                                     result_lines_vec.remove(start);
                                 }
                                 result_lines_vec.insert(start, &tmp);
-                                result.push(String::from("arithmetic_operator_deletion:") + &result_lines_vec.join("\n"));
+                                result.push(
+                                    String::from("arithmetic_operator_deletion:")
+                                        + &result_lines_vec.join("\n"),
+                                );
                             }
                         }
                         _ => {}
@@ -385,7 +438,7 @@ pub fn mutate_file_by_string(file: String, num_line: usize, constants: Vec<Strin
                 syn::Stmt::Expr(expr) => (),
             }
         }
-        Err(error) => { }
+        Err(error) => {}
     }
     return result;
 }
@@ -627,6 +680,7 @@ impl<'ast> VisitMut for BinOpVisitor {
     }
 }
 
+#[derive(Default, Debug)]
 pub struct MutantInfo {
     pub source_name: String,
     pub file_name: String,
@@ -724,22 +778,72 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         let constants = get_constants_and_void_functions(file.clone()).0;
         let void_functions = get_constants_and_void_functions(file.clone()).1;
 
-        let mutated_files_with_muttype: Vec<String> = mutate_file_by_string(file.clone(), num_line.clone(), constants.clone(), void_functions.clone()).clone();
+        let mutated_files_with_muttype: Vec<String> = mutate_file_by_string(
+            file.clone(),
+            num_line.clone(),
+            constants.clone(),
+            void_functions.clone(),
+        )
+        .clone();
         for mutated_file_with_muttype in mutated_files_with_muttype {
-            let mutated_result: Vec<&str> = mutated_file_with_muttype.splitn(2,":").collect();
+            let mutated_result: Vec<&str> = mutated_file_with_muttype.splitn(2, ":").collect();
             let mutated_file = mutated_result[1].clone();
             let _muttype = mutated_result[0].to_string().clone();
-    
-            let mut fz = fs::File::create(format!("{}{}{}{}{}{}", using.to_string().clone(), "_", num_line, "_", idx, ".rs")).unwrap();
+
+            let mut fz = fs::File::create(format!(
+                "{}{}{}{}{}{}",
+                using.to_string().clone(),
+                "_",
+                num_line,
+                "_",
+                idx,
+                ".rs"
+            ))
+            .unwrap();
             fz.write_all(mutated_file.as_bytes());
             Command::new("rustfmt")
-                        .arg(format!("{}{}{}{}{}{}", using.to_string().clone(), "_", num_line, "_", idx, ".rs"))
-                        .spawn()
-                        .expect("rustfmt command failed to start");
-            
-            ret.push(MutantInfo{source_name : using.to_string().clone(), file_name : format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), target_line : *num_line, mutation : _muttype.clone()});
+                .arg(format!(
+                    "{}{}{}{}{}{}",
+                    using.to_string().clone(),
+                    "_",
+                    num_line,
+                    "_",
+                    idx,
+                    ".rs"
+                ))
+                .spawn()
+                .expect("rustfmt command failed to start");
+
+            ret.push(MutantInfo {
+                source_name: using.to_string().clone(),
+                file_name: format!(
+                    "{}{}{}{}{}{}",
+                    using.to_string().clone(),
+                    "_",
+                    num_line,
+                    "_",
+                    idx,
+                    ".rs"
+                ),
+                target_line: *num_line,
+                mutation: _muttype.clone(),
+            });
             idx += 1;
-            println!("{}, {}, {}, {}", using.to_string().clone(), format!("{}{}{}{}{}{}", using.to_string().clone(),"_",num_line,"_",idx,".rs"), *num_line, _muttype.clone());
+            println!(
+                "{}, {}, {}, {}",
+                using.to_string().clone(),
+                format!(
+                    "{}{}{}{}{}{}",
+                    using.to_string().clone(),
+                    "_",
+                    num_line,
+                    "_",
+                    idx,
+                    ".rs"
+                ),
+                *num_line,
+                _muttype.clone()
+            );
         }
 
         println!(
@@ -765,6 +869,8 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         .collect::<Vec<_>>();
     let mut option_idx = 0;
 
+    // println!("OPTIONS");
+
     for op_pos in option_positions {
         // parse op_pos
         lazy_static! {
@@ -781,6 +887,11 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
         let start_col = captures["start_col"].parse::<usize>().unwrap() - 1;
         let end_line = captures["end_line"].parse::<usize>().unwrap() - 1;
         let end_col = captures["end_col"].parse::<usize>().unwrap() - 1;
+
+        // println!(
+        //     "OPTION {}:{}, {}:{}",
+        //     start_line, start_col, end_line, end_col
+        // );
 
         // ignore multi-line
         if start_line != end_line {
@@ -841,6 +952,17 @@ pub fn mutate(file: String, num_line: Vec<usize>) -> Vec<MutantInfo> {
             target_line: start_line,
             mutation: "OptionToNone".to_owned(),
         });
+
+        // println!(
+        //     "OPTION MUTATOR CREATED\n{:#?}",
+        //     MutantInfo {
+        //         source_name: using.to_owned().clone(),
+        //         file_name: mutated_path.clone(),
+        //         target_line: start_line,
+        //         mutation: "OptionToNone".to_owned(),
+        //     }
+        // );
+
         // update option_idx
         option_idx += 1;
     }
